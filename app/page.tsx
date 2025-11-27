@@ -3,12 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
 	Upload,
-	Home,
+	Home as HomeIcon,
 	TreePine,
 	PaintBucket,
 	Loader2,
 	Undo2,
-	Download,
 	MousePointer2,
 	Image as ImageIcon,
 	Sparkles,
@@ -35,26 +34,672 @@ import {
 	Minimize2,
 	ZoomIn,
 	ZoomOut,
-	Move,
 	Palette,
-	FileJson,
 	UploadCloud,
 	ShoppingCart,
-	ExternalLink,
 	ArrowRightCircle,
 	FileImage,
-	FileType,
 	HardDrive,
 	ChevronLeft,
 	ChevronRight,
 	Check,
 	PlayCircle,
+	Download,
 } from 'lucide-react';
 
 const DEMO_IMAGE_URL =
 	'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=2070&auto=format&fit=crop';
 
-// --- KOMPONENTY POMOCNICZE (Zdefiniowane na zewnątrz) ---
+// --- DANE I KONFIGURACJA (Zdefiniowane globalnie, aby uniknąć błędów ReferenceError) ---
+
+const categoryLabels = {
+	facade: 'Elewacja i Ściany',
+	roof: 'Pokrycie Dachowe',
+	windows: 'Stolarka Okienna i Drzwiowa',
+	ground: 'Teren i Nawierzchnia',
+	fence: 'Ogrodzenie i Bramy',
+	garden: 'Roślinność i Ogród',
+	lighting: 'Oświetlenie Zewnętrzne',
+	extras: 'Dodatki i Mała Architektura',
+	atmosphere: 'Klimat i Styl',
+	custom: 'Inne',
+};
+
+const suggestionsMap = {
+	presets: [
+		'Jaki styl pasuje do małego domu?',
+		'Co jest teraz najmodniejsze?',
+		'Styl nowoczesny czy klasyczny?',
+	],
+	facade: [
+		'Czy ciemna elewacja się nagrzewa?',
+		'Tynk czy deska - co trwalsze?',
+		'Jaki kolor pasuje do brązowego dachu?',
+	],
+	roof: [
+		'Dachówka czy blacha?',
+		'Czy czarny dach jest praktyczny?',
+		'Koszty dachu płaskiego vs spadzistego',
+	],
+	windows: [
+		'Czarne czy drewniane okna?',
+		'Zalety dużych przeszkleń',
+		'Okna ze szprosami - czy warto?',
+	],
+	ground: [
+		'Kostka czy płyty betonowe?',
+		'Tani sposób na podjazd',
+		'Jak odprowadzić wodę z tarasu?',
+	],
+	garden: [
+		'Rośliny niewymagające podlewania',
+		'Szybko rosnący żywopłot',
+		'Ogród nowoczesny czy wiejski?',
+	],
+	lighting: [
+		'Ciepłe czy zimne światło?',
+		'Jak oświetlić ścieżkę?',
+		'Oświetlenie solarne - opinie',
+	],
+	atmosphere: ['Jak dom wygląda zimą?', 'Pokaż wersję o zachodzie słońca'],
+	default: [
+		'Czy te kolory do siebie pasują?',
+		'Jak obniżyć koszt tej elewacji?',
+	],
+};
+
+const fullOptions = {
+	atmosphere: [
+		{
+			val: 'błękitne niebo',
+			label: 'Słoneczny Dzień',
+			color: 'bg-blue-400',
+		},
+		{
+			val: 'złota godzina',
+			label: 'Zachód Słońca',
+			color: 'bg-orange-400',
+		},
+		{
+			val: 'śnieg',
+			label: 'Zima',
+			color: 'bg-slate-200',
+		},
+		{
+			val: 'oświetlenie, ciemne tło',
+			label: 'Noc',
+			color: 'bg-slate-900',
+			textColor: 'text-white',
+		},
+		{
+			val: 'mokra nawierzchnia',
+			label: 'Jesień / Deszcz',
+			color: 'bg-slate-500',
+			textColor: 'text-white',
+		},
+		{
+			val: 'tajemniczo',
+			label: 'Mglisty Poranek',
+			color: 'bg-gray-300',
+		},
+		{
+			val: 'dramatyczne chmury',
+			label: 'Burza',
+			color: 'bg-slate-700',
+			textColor: 'text-white',
+		},
+	],
+	facade: [
+		{
+			val: 'silikonowy gładki',
+			label: 'Biały Tynk',
+			color: 'bg-white',
+		},
+		{
+			val: 'tynk architektoniczny/beton',
+			label: 'Jasny Szary',
+			color: 'bg-gray-300',
+		},
+		{
+			val: 'ciemny tynk',
+			label: 'Grafit',
+			color: 'bg-slate-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'ciepły tynk',
+			label: 'Cappuccino',
+			color: 'bg-orange-100',
+		},
+		{
+			val: 'deska modrzewiowa',
+			label: 'Drewno Naturalne',
+			color: 'bg-amber-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'shou sugi ban - opalane',
+			label: 'Czarne Drewno',
+			color: 'bg-neutral-900',
+			textColor: 'text-white',
+		},
+		{
+			val: 'klinkier klasyczny',
+			label: 'Czerwona Cegła',
+			color: 'bg-red-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'rozbiórkowa, loft',
+			label: 'Stara Cegła',
+			color: 'bg-red-900',
+			textColor: 'text-white',
+		},
+		{
+			val: 'łupek kwarcytowy',
+			label: 'Kamień',
+			color: 'bg-stone-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'stal rdzawa',
+			label: 'Corten',
+			color: 'bg-orange-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'płyty architektoniczne',
+			label: 'Beton 3D',
+			color: 'bg-gray-400',
+		},
+		{
+			val: 'drewniane, styl góralski',
+			label: 'Bale',
+			color: 'bg-amber-800',
+			textColor: 'text-white',
+		},
+		{
+			val: 'rośliny wertykalne',
+			label: 'Zielona Ściana',
+			color: 'bg-green-600',
+			textColor: 'text-white',
+		},
+	],
+	roof: [
+		{
+			val: 'dachówka ceramiczna',
+			label: 'Płaska Antracyt',
+			color: 'bg-slate-800',
+			textColor: 'text-white',
+		},
+		{
+			val: 'dachówka klasyczna',
+			label: 'Falista Czerwień',
+			color: 'bg-red-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'szara',
+			label: 'Blacha na Rąbek',
+			color: 'bg-slate-500',
+			textColor: 'text-white',
+		},
+		{
+			val: 'bitumiczny',
+			label: 'Gont Brązowy',
+			color: 'bg-amber-900',
+			textColor: 'text-white',
+		},
+		{
+			val: 'ekstensywny',
+			label: 'Zielony Dach',
+			color: 'bg-green-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'fotowoltaiczny',
+			label: 'Dach Solarny',
+			color: 'bg-blue-900',
+			textColor: 'text-white',
+		},
+		{
+			val: 'trzcina',
+			label: 'Strzecha',
+			color: 'bg-yellow-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'blacha miedziana',
+			label: 'Miedź',
+			color: 'bg-orange-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'naturalny kamień',
+			label: 'Łupek',
+			color: 'bg-slate-700',
+			textColor: 'text-white',
+		},
+	],
+	windows: [
+		{
+			val: 'RAL 7016',
+			label: 'Antracyt',
+			color: 'bg-slate-800',
+			textColor: 'text-white',
+		},
+		{
+			val: 'Złoty Dąb',
+			label: 'Drewno',
+			color: 'bg-amber-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'PCV',
+			label: 'Białe',
+			color: 'bg-white',
+		},
+		{
+			val: 'aluminium',
+			label: 'Czarny Mat',
+			color: 'bg-black',
+			textColor: 'text-white',
+		},
+		{
+			val: 'styl dworkowy',
+			label: 'Szprosy',
+			color: 'bg-white',
+			subLabel: 'Kratka',
+		},
+		{
+			val: 'duże przeszklenia',
+			label: 'Bezramowe',
+			color: 'bg-blue-200',
+		},
+		{
+			val: 'tradycyjne',
+			label: 'Łukowe',
+			color: 'bg-amber-100',
+		},
+		{
+			val: 'mosiądz/glamour',
+			label: 'Złote Ramy',
+			color: 'bg-yellow-400',
+		},
+	],
+	ground: [
+		{
+			val: 'szara',
+			label: 'Kostka Melanż',
+			color: 'bg-gray-400',
+		},
+		{
+			val: 'betonowe jasne',
+			label: 'Płyty XXL',
+			color: 'bg-gray-200',
+		},
+		{
+			val: 'jasna',
+			label: 'Kostka Granitowa',
+			color: 'bg-stone-300',
+		},
+		{
+			val: 'kompozyt brązowy',
+			label: 'Deska Tarasowa',
+			color: 'bg-amber-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'dywanowy',
+			label: 'Trawnik',
+			color: 'bg-green-500',
+			textColor: 'text-white',
+		},
+		{
+			val: 'ścieżka kamienna',
+			label: 'Żwir',
+			color: 'bg-stone-200',
+		},
+		{
+			val: 'gładka nawierzchnia',
+			label: 'Asfalt',
+			color: 'bg-slate-800',
+			textColor: 'text-white',
+		},
+		{
+			val: 'bruk rzymski',
+			label: 'Kocie Łby',
+			color: 'bg-stone-500',
+			textColor: 'text-white',
+		},
+		{
+			val: 'bangkirai',
+			label: 'Drewno Egzotyczne',
+			color: 'bg-amber-800',
+			textColor: 'text-white',
+		},
+		{
+			val: 'płyty ażurowe z trawą',
+			label: 'Eko-Kratka',
+			color: 'bg-green-300',
+		},
+	],
+	fence: [
+		{
+			val: 'systemowe antracyt',
+			label: 'Panelowe',
+			color: 'bg-slate-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'gładkie',
+			label: 'Bloczki Betonowe',
+			color: 'bg-gray-300',
+		},
+		{
+			val: 'płot drewniany nowoczesny',
+			label: 'Deski Poziome',
+			color: 'bg-amber-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'kosze z kamieniem',
+			label: 'Gabiony',
+			color: 'bg-stone-400',
+		},
+		{
+			val: 'klasyczne z ornamentami',
+			label: 'Kute',
+			color: 'bg-black',
+			textColor: 'text-white',
+		},
+		{
+			val: 'aluminiowe',
+			label: 'Żaluzjowe',
+			color: 'bg-slate-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'styl amerykański',
+			label: 'Sztachety Białe',
+			color: 'bg-white',
+		},
+		{
+			val: 'klinkier',
+			label: 'Mur Ceglany',
+			color: 'bg-red-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'nowoczesna balustrada',
+			label: 'Szkło',
+			color: 'bg-blue-100',
+		},
+	],
+	garden: [
+		{
+			val: 'trawy ozdobne, lawenda',
+			label: 'Nowoczesny',
+			color: 'bg-green-300',
+		},
+		{
+			val: 'sosny, paprocie',
+			label: 'Leśny',
+			color: 'bg-green-800',
+			textColor: 'text-white',
+		},
+		{
+			val: 'bonsai, żwir',
+			label: 'Japoński',
+			color: 'bg-emerald-100',
+		},
+		{
+			val: 'kolorowe kwiaty',
+			label: 'Wiejski',
+			color: 'bg-pink-300',
+		},
+		{
+			val: 'sukulenty, kamienie',
+			label: 'Skalniak',
+			color: 'bg-stone-400',
+		},
+		{
+			val: 'dzika',
+			label: 'Łąka Kwietna',
+			color: 'bg-yellow-200',
+		},
+		{
+			val: 'żywopłoty, symetria',
+			label: 'Francuski',
+			color: 'bg-green-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'cyprysy, zioła',
+			label: 'Toskania',
+			color: 'bg-orange-200',
+		},
+		{
+			val: 'palmy, duże liście',
+			label: 'Tropikalny',
+			color: 'bg-green-500',
+			textColor: 'text-white',
+		},
+	],
+	lighting: [
+		{
+			val: 'góra-dół',
+			label: 'Kinkiety LED',
+			color: 'bg-yellow-100',
+		},
+		{
+			val: 'świetlne nad tarasem',
+			label: 'Girlandy',
+			color: 'bg-yellow-200',
+		},
+		{
+			val: 'punktowe podświetlenie roślin',
+			label: 'Iluminacja',
+			color: 'bg-green-200',
+		},
+		{
+			val: 'w podjeździe',
+			label: 'Linie LED',
+			color: 'bg-blue-100',
+		},
+		{
+			val: 'ogrodowe klasyczne',
+			label: 'Latarnie',
+			color: 'bg-slate-800',
+			textColor: 'text-white',
+		},
+		{
+			val: 'żywy ogień',
+			label: 'Pochodnie',
+			color: 'bg-orange-500',
+			textColor: 'text-white',
+		},
+		{
+			val: 'podświetlany',
+			label: 'Numer Domu',
+			color: 'bg-white',
+		},
+		{
+			val: 'kolorowe światło',
+			label: 'RGB Smart',
+			color: 'bg-purple-500',
+			textColor: 'text-white',
+		},
+	],
+	extras: [
+		{
+			val: 'tarasowa',
+			label: 'Markiza',
+			color: 'bg-orange-200',
+		},
+		{
+			val: 'drewniana',
+			label: 'Pergola',
+			color: 'bg-amber-700',
+			textColor: 'text-white',
+		},
+		{
+			val: 'panele na dachu',
+			label: 'Fotowoltaika',
+			color: 'bg-blue-900',
+			textColor: 'text-white',
+		},
+		{
+			val: 'nowoczesne',
+			label: 'Meble Tarasowe',
+			color: 'bg-gray-200',
+		},
+		{
+			val: 'z roślinami',
+			label: 'Donice Betonowe',
+			color: 'bg-gray-400',
+		},
+		{
+			val: 'ogrodowe',
+			label: 'Jacuzzi',
+			color: 'bg-blue-400',
+		},
+		{
+			val: 'fire pit',
+			label: 'Palenisko',
+			color: 'bg-orange-600',
+			textColor: 'text-white',
+		},
+		{
+			val: 'huśtawka wisząca',
+			label: 'Kokon',
+			color: 'bg-stone-300',
+		},
+		{
+			val: 'grill murowany',
+			label: 'Kuchnia Letnia',
+			color: 'bg-red-800',
+			textColor: 'text-white',
+		},
+		{
+			val: 'ogrodowy',
+			label: 'Basen',
+			color: 'bg-blue-500',
+			textColor: 'text-white',
+		},
+		{
+			val: 'gospodarczy',
+			label: 'Domek Narzędziowy',
+			color: 'bg-amber-200',
+		},
+	],
+};
+
+const presetsData = [
+	{
+		id: 'modern_barn',
+		label: 'Nowoczesna Stodoła',
+		desc: 'Minimalizm, drewno i antracyt',
+		color: 'bg-slate-700',
+		mods: {
+			facade: ['deska modrzewiowa', 'ciemny tynk'],
+			roof: ['blacha na rąbek szara'],
+			windows: ['czarny mat'],
+			ground: ['płyty betonowe jasne'],
+			garden: ['nowoczesny z trawami'],
+		},
+	},
+	{
+		id: 'classic_elegance',
+		label: 'Klasyczna Elegancja',
+		desc: 'Jasny tynk i czerwona dachówka',
+		color: 'bg-orange-100',
+		mods: {
+			facade: ['tynk cappuccino'],
+			roof: ['dachówka falista czerwona'],
+			windows: ['białe PCV'],
+			ground: ['szara kostka'],
+			garden: ['wiejski z kwiatami'],
+		},
+	},
+	{
+		id: 'industrial_loft',
+		label: 'Industrialny Loft',
+		desc: 'Beton, stal i szkło',
+		color: 'bg-gray-400',
+		mods: {
+			facade: ['tynk architektoniczny', 'stara cegła'],
+			roof: ['dachówka płaska antracyt'],
+			windows: ['czarny mat'],
+			extras: ['nowoczesne meble'],
+			lighting: ['kinkiety góra-dół'],
+		},
+	},
+	{
+		id: 'mediterranean',
+		label: 'Styl Śródziemnomorski',
+		desc: 'Kamień, ciepło i słońce',
+		color: 'bg-yellow-200',
+		mods: {
+			facade: ['kamień piaskowiec', 'beżowy tynk'],
+			roof: ['mnich-mniszka'],
+			garden: ['cyprysy', 'lawenda'],
+			atmosphere: ['słoneczny dzień'],
+		},
+	},
+	{
+		id: 'scandi_boho',
+		label: 'Skandynawskie Boho',
+		desc: 'Biel, drewno i przytulność',
+		color: 'bg-stone-100',
+		mods: {
+			facade: ['biała deska', 'jasny tynk'],
+			roof: ['jasnoszary'],
+			garden: ['naturalny'],
+			extras: ['drewniany taras', 'wiszący fotel'],
+			atmosphere: ['jasny, miękki dzień'],
+		},
+	},
+	{
+		id: 'polish_manor',
+		label: 'Polski Dworek',
+		desc: 'Tradycja z kolumnami',
+		color: 'bg-white',
+		mods: {
+			facade: ['biały tynk gładki'],
+			roof: ['karpiówka ceglasta'],
+			windows: ['ze szprosami białe'],
+			garden: ['bukszpan', 'róże'],
+			fence: ['kuty z podmurówką'],
+		},
+	},
+	{
+		id: 'cyberpunk',
+		label: 'Futurystyczny Neon',
+		desc: 'Odważny eksperyment',
+		color: 'bg-purple-900',
+		mods: {
+			facade: ['ciemny beton', 'panele szklane'],
+			lighting: ['neonowe RGB', 'linie LED'],
+			atmosphere: ['nocne miasto', 'deszcz'],
+			extras: ['nowoczesne rzeźby'],
+		},
+	},
+	{
+		id: 'eco_green',
+		label: 'Eko Dom',
+		desc: 'Zatopiony w zieleni',
+		color: 'bg-green-700',
+		mods: {
+			facade: ['drewno naturalne', 'wertykalny ogród'],
+			roof: ['zielony dach ekstensywny'],
+			garden: ['łąka kwietna'],
+			ground: ['kratka trawnikowa'],
+		},
+	},
+];
+
+// --- KOMPONENTY POMOCNICZE ---
 
 const BudgetIndicator = ({ score }) => (
 	<div
@@ -99,7 +744,7 @@ const OptionCard = ({
 		<div className='p-3 bg-white/50 flex-1 flex flex-col justify-center'>
 			<h4
 				className={`font-medium text-xs sm:text-sm leading-tight ${
-					textColor || (isActive ? 'text-blue-700' : 'text-slate-800')
+					isActive ? 'text-blue-700' : 'text-slate-800'
 				}`}
 			>
 				{label}
@@ -176,7 +821,7 @@ export default function Home() {
 	const [error, setError] = useState('');
 	const [activeTab, setActiveTab] = useState('presets');
 
-	const [history, setHistory] = useState([]);
+	const [history, setHistory] = useState<any[]>([]);
 	const [isCompareMode, setIsCompareMode] = useState(false);
 	const [sliderPosition, setSliderPosition] = useState(50);
 	const [budgetScore, setBudgetScore] = useState(1);
@@ -224,247 +869,6 @@ export default function Home() {
 	const chatEndRef = useRef(null);
 	const imageContainerRef = useRef(null);
 	const tabsContainerRef = useRef(null);
-
-	// --- DANE ---
-	const categoryLabels = {
-		facade: 'Elewacja i Ściany',
-		roof: 'Pokrycie Dachowe',
-		windows: 'Stolarka Okienna i Drzwiowa',
-		ground: 'Teren i Nawierzchnia',
-		fence: 'Ogrodzenie i Bramy',
-		garden: 'Roślinność i Ogród',
-		lighting: 'Oświetlenie Zewnętrzne',
-		extras: 'Dodatki i Mała Architektura',
-		atmosphere: 'Klimat i Styl',
-		custom: 'Inne',
-	};
-
-	const suggestionsMap = {
-		presets: [
-			'Jaki styl pasuje do małego domu?',
-			'Co jest teraz najmodniejsze?',
-			'Styl nowoczesny czy klasyczny?',
-		],
-		facade: [
-			'Czy ciemna elewacja się nagrzewa?',
-			'Tynk czy deska - co trwalsze?',
-			'Jaki kolor pasuje do brązowego dachu?',
-		],
-		roof: [
-			'Dachówka czy blacha?',
-			'Czy czarny dach jest praktyczny?',
-			'Koszty dachu płaskiego vs spadzistego',
-		],
-		windows: [
-			'Czarne czy drewniane okna?',
-			'Zalety dużych przeszkleń',
-			'Okna ze szprosami - czy warto?',
-		],
-		ground: [
-			'Kostka czy płyty betonowe?',
-			'Tani sposób na podjazd',
-			'Jak odprowadzić wodę z tarasu?',
-		],
-		garden: [
-			'Rośliny niewymagające podlewania',
-			'Szybko rosnący żywopłot',
-			'Ogród nowoczesny czy wiejski?',
-		],
-		lighting: [
-			'Ciepłe czy zimne światło?',
-			'Jak oświetlić ścieżkę?',
-			'Oświetlenie solarne - opinie',
-		],
-		atmosphere: ['Jak dom wygląda zimą?', 'Pokaż wersję o zachodzie słońca'],
-		default: [
-			'Czy te kolory do siebie pasują?',
-			'Jak obniżyć koszt tej elewacji?',
-		],
-	};
-
-	const fullOptions = {
-		atmosphere: [
-			{
-				val: 'słoneczny letni dzień, błękitne niebo',
-				label: 'Słoneczny Dzień',
-				subLabel: 'Idealna pogoda',
-				color: 'bg-gradient-to-br from-blue-200 to-blue-400',
-			},
-			{
-				val: 'złota godzina, zachód słońca, ciepłe światło',
-				label: 'Zachód Słońca',
-				subLabel: 'Romantycznie',
-				color: 'bg-gradient-to-br from-orange-200 to-orange-400',
-			},
-			{
-				val: 'zima',
-				label: 'Zima',
-				subLabel: 'Śnieg',
-				color: 'bg-gradient-to-br from-slate-100 to-slate-300',
-			},
-		],
-		facade: [
-			{
-				val: 'biały tynk silikonowy gładki',
-				label: 'Biały Tynk',
-				color: 'bg-gray-50',
-			},
-			{ val: 'drewno elewacyjne', label: 'Drewno', color: 'bg-amber-600' },
-			{ val: 'cegła klinkierowa', label: 'Cegła', color: 'bg-red-700' },
-			{ val: 'kamień elewacyjny', label: 'Kamień', color: 'bg-stone-600' },
-			{ val: 'stal kortenowska', label: 'Corten', color: 'bg-orange-700' },
-		],
-		roof: [
-			{
-				val: 'dachówka ceramiczna antracyt',
-				label: 'Antracyt',
-				color: 'bg-slate-800',
-			},
-			{
-				val: 'dachówka ceramiczna czerwona',
-				label: 'Czerwień',
-				color: 'bg-red-600',
-			},
-			{ val: 'blacha na rąbek', label: 'Blacha', color: 'bg-gray-500' },
-			{ val: 'zielony dach', label: 'Zielony Dach', color: 'bg-green-600' },
-		],
-		windows: [
-			{ val: 'okna antracyt', label: 'Antracyt', color: 'bg-slate-800' },
-			{ val: 'okna drewniane', label: 'Drewno', color: 'bg-amber-500' },
-			{ val: 'okna białe', label: 'Białe', color: 'bg-white' },
-		],
-		ground: [
-			{ val: 'kostka brukowa', label: 'Kostka', color: 'bg-slate-400' },
-			{ val: 'płyty betonowe', label: 'Płyty', color: 'bg-gray-200' },
-			{ val: 'trawnik', label: 'Trawnik', color: 'bg-green-500' },
-		],
-		fence: [
-			{ val: 'ogrodzenie panelowe', label: 'Panelowe', color: 'bg-slate-700' },
-			{ val: 'płot drewniany', label: 'Drewno', color: 'bg-amber-600' },
-			{ val: 'gabiony', label: 'Gabiony', color: 'bg-stone-500' },
-		],
-		garden: [
-			{ val: 'ogród nowoczesny', label: 'Nowoczesny', color: 'bg-green-200' },
-			{ val: 'ogród wiejski', label: 'Wiejski', color: 'bg-pink-200' },
-			{ val: 'ogród japoński', label: 'Japoński', color: 'bg-emerald-100' },
-		],
-		lighting: [
-			{ val: 'kinkiety', label: 'Kinkiety', color: 'bg-yellow-200' },
-			{ val: 'girlandy', label: 'Girlandy', color: 'bg-yellow-100' },
-		],
-		extras: [
-			{ val: 'markiza', label: 'Markiza', color: 'bg-orange-300' },
-			{ val: 'fotowoltaika', label: 'PV', color: 'bg-blue-900' },
-			{ val: 'jacuzzi', label: 'Jacuzzi', color: 'bg-blue-400' },
-		],
-	};
-
-	const presetsData = [
-		{
-			id: 'modern_barn',
-			label: 'Nowoczesna Stodoła',
-			desc: 'Minimalizm, drewno i antracyt',
-			color: 'bg-slate-700',
-			mods: {
-				facade: [
-					'elewacja z deski modrzewiowej naturalnej',
-					'ciemny grafitowy tynk',
-				],
-				roof: ['blacha na rąbek stojący szara'],
-				windows: ['okna aluminiowe czarny mat'],
-				ground: ['wielkoformatowe płyty betonowe jasne'],
-				garden: ['ogród nowoczesny z trawami ozdobnymi i lawendą'],
-			},
-		},
-		{
-			id: 'classic_elegance',
-			label: 'Klasyczna Elegancja',
-			desc: 'Jasny tynk i czerwona dachówka',
-			color: 'bg-orange-100',
-			mods: {
-				facade: ['ciepły tynk w kolorze cappuccino'],
-				roof: ['dachówka ceramiczna falista czerwona'],
-				windows: ['okna i drzwi białe PCV'],
-				ground: ['szara kostka brukowa melanż'],
-				garden: ['ogród wiejski z kolorowymi kwiatami i krzewami'],
-			},
-		},
-		{
-			id: 'industrial_loft',
-			label: 'Industrialny Loft',
-			desc: 'Beton, stal i szkło',
-			color: 'bg-gray-400',
-			mods: {
-				facade: ['jasnoszary tynk architektoniczny', 'stara cegła rozbiórkowa'],
-				roof: ['dachówka ceramiczna płaska antracyt'],
-				windows: ['okna aluminiowe czarny mat'],
-				extras: ['nowoczesne meble tarasowe wypoczynkowe'],
-				lighting: ['nowoczesne kinkiety elewacyjne góra-dół'],
-			},
-		},
-		{
-			id: 'mediterranean',
-			label: 'Styl Śródziemnomorski',
-			desc: 'Kamień, ciepło i słońce',
-			color: 'bg-yellow-200',
-			mods: {
-				facade: ['kamień elewacyjny jasny piaskowiec', 'ciepły beżowy tynk'],
-				roof: ['dachówka mnich-mniszka'],
-				garden: ['ogród z cyprysami i lawendą'],
-				atmosphere: ['słoneczny letni dzień, błękitne niebo'],
-			},
-		},
-		{
-			id: 'scandi_boho',
-			label: 'Skandynawskie Boho',
-			desc: 'Biel, drewno i przytulność',
-			color: 'bg-stone-100',
-			mods: {
-				facade: ['biała deska elewacyjna', 'jasny tynk'],
-				roof: ['dachówka jasnoszara'],
-				garden: ['naturalny ogród z trawami i hamakiem'],
-				extras: ['drewniany taras', 'wiszący fotel'],
-				atmosphere: ['jasny, miękki dzień'],
-			},
-		},
-		{
-			id: 'polish_manor',
-			label: 'Polski Dworek',
-			desc: 'Tradycja z kolumnami',
-			color: 'bg-white',
-			mods: {
-				facade: ['biały tynk gładki'],
-				roof: ['dachówka karpiówka ceglasta'],
-				windows: ['okna ze szprosami białe'],
-				garden: ['strzyżony bukszpan, róże'],
-				fence: ['płot kuty z podmurówką'],
-			},
-		},
-		{
-			id: 'cyberpunk',
-			label: 'Futurystyczny Neon',
-			desc: 'Odważny eksperyment',
-			color: 'bg-purple-900',
-			mods: {
-				facade: ['ciemny beton', 'panele szklane'],
-				lighting: ['oświetlenie neonowe RGB', 'linie świetlne LED'],
-				atmosphere: ['nocne miasto, deszcz, neonowe odbicia'],
-				extras: ['nowoczesne rzeźby'],
-			},
-		},
-		{
-			id: 'eco_green',
-			label: 'Eko Dom',
-			desc: 'Zatopiony w zieleni',
-			color: 'bg-green-700',
-			mods: {
-				facade: ['drewno naturalne', 'wertykalny ogród na ścianie'],
-				roof: ['zielony dach ekstensywny'],
-				garden: ['łąka kwietna', 'duże drzewa'],
-				ground: ['kratka trawnikowa'],
-			},
-		},
-	];
 
 	useEffect(() => {
 		const saved = localStorage.getItem('house_viz_projects');
@@ -658,6 +1062,14 @@ export default function Home() {
 	};
 	const endPan = () => setIsDragging(false);
 
+	const handleSliderMove = (e) => {
+		if (!sliderRef.current) return;
+		const rect = sliderRef.current.getBoundingClientRect();
+		const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+		const percent = Math.min(Math.max((x / rect.width) * 100, 0), 100);
+		setSliderPosition(percent);
+	};
+
 	const saveProjectToBrowser = () => {
 		const name = prompt('Nazwa:', projectName);
 		if (!name) return;
@@ -850,7 +1262,7 @@ export default function Home() {
 		setIsCompareMode(false);
 		resetZoom();
 		try {
-			let promptParts = [];
+			const promptParts = [];
 			const joinSelections = (arr) =>
 				arr.length > 1 ? `połączenie: ${arr.join(' + ')}` : arr[0];
 			if (modifications.facade.length)
@@ -905,7 +1317,13 @@ export default function Home() {
 				}),
 			});
 			const data = await response.json();
-			if (data.error) throw new Error(data.error);
+			if (data.error) {
+				const errorMsg =
+					typeof data.error === 'object'
+						? data.error.message || JSON.stringify(data.error)
+						: data.error;
+				throw new Error(errorMsg);
+			}
 
 			const generatedBase64 = data.candidates?.[0]?.content?.parts?.find(
 				(p) => p.inlineData
@@ -941,7 +1359,7 @@ export default function Home() {
 					<div className='max-w-7xl mx-auto px-4 py-3 flex items-center justify-between'>
 						<div className='flex items-center space-x-3'>
 							<div className='bg-gradient-to-br from-blue-600 to-indigo-700 p-2 rounded-lg text-white shadow-md'>
-								<Home size={24} />
+								<HomeIcon size={24} />
 							</div>
 							<div>
 								<h1 className='text-lg sm:text-xl font-bold tracking-tight text-slate-900'>
@@ -1195,6 +1613,37 @@ export default function Home() {
 							/>
 						</div>
 					</div>
+					{!isFullscreen && history.length > 0 && (
+						<div className='h-32 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col'>
+							<div className='flex items-center justify-between mb-2'>
+								<h3 className='text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2'>
+									<History size={14} /> Historia Generacji
+								</h3>
+								<span className='text-[10px] text-slate-400'>
+									{history.length} / 10
+								</span>
+							</div>
+							<div className='flex gap-3 overflow-x-auto pb-2 custom-scrollbar'>
+								{history.map((item) => (
+									<div
+										key={item.id}
+										onClick={() => restoreFromHistory(item)}
+										className='relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all group'
+									>
+										<img
+											src={item.image}
+											alt='History'
+											className='w-full h-full object-cover'
+										/>
+										<div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
+										<div className='absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] px-1 py-0.5 text-center backdrop-blur-sm'>
+											{item.timestamp}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
 				</div>
 				<div className='lg:col-span-4 flex flex-col h-full max-h-[calc(100vh-100px)]'>
 					<div className='bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full'>
@@ -1233,7 +1682,7 @@ export default function Home() {
 								/>
 								<CategoryButton
 									id='roof'
-									icon={Home}
+									icon={HomeIcon}
 									label='Dach'
 									onClick={setActiveTab}
 									isActive={activeTab === 'roof'}
@@ -1315,7 +1764,7 @@ export default function Home() {
 							)}
 							{activeTab !== 'presets' && (
 								<div className='grid grid-cols-2 gap-3 mb-6'>
-									{(fullOptions[activeTab] || []).map((opt, idx) => (
+									{(fullOptions[activeTab as keyof typeof fullOptions] || []).map((opt: any, idx) => (
 										<OptionCard
 											key={idx}
 											label={opt.label}
