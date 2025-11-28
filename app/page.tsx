@@ -45,6 +45,9 @@ import {
 	Check,
 	PlayCircle,
 	Download,
+	Heart,
+	ArrowRight,
+	RotateCcw,
 } from 'lucide-react';
 import {
 	categoryLabels,
@@ -62,11 +65,43 @@ import { useHouseGenerator } from '@/hooks/useHouseGenerator';
 const DEMO_IMAGE_URL =
 	'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=2070&auto=format&fit=crop';
 
-
-
 // --- KOMPONENTY POMOCNICZE ---
 
+interface SectionToggleProps {
+	isEnabled: boolean;
+	onToggle: () => void;
+	label: string;
+}
 
+const SectionToggle: React.FC<SectionToggleProps> = ({ isEnabled, onToggle, label }) => (
+	<button
+		onClick={onToggle}
+		className={`w-full flex items-center justify-between p-3 mb-3 rounded-xl border-2 transition-all ${
+			isEnabled
+				? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-sm'
+				: 'bg-slate-100 border-slate-300'
+		}`}
+	>
+		<div className='flex items-center gap-3'>
+			<div className={`p-1.5 rounded-md ${isEnabled ? 'bg-blue-600 text-white' : 'bg-slate-400 text-white'}`}>
+				<Sparkles size={14} />
+			</div>
+			<span className='text-xs font-bold text-slate-700 uppercase tracking-wider'>{label}</span>
+		</div>
+		<div className='flex items-center gap-2'>
+			<span className={`text-xs font-bold ${isEnabled ? 'text-blue-700' : 'text-slate-500'}`}>
+				{isEnabled ? 'MODYFIKUJ' : 'ZACHOWAJ'}
+			</span>
+			<div className={`w-11 h-6 rounded-full transition-colors ${isEnabled ? 'bg-blue-600' : 'bg-slate-400'}`}>
+				<div
+					className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
+						isEnabled ? 'translate-x-5' : 'translate-x-0.5'
+					} mt-0.5`}
+				/>
+			</div>
+		</div>
+	</button>
+);
 
 // --- GŁÓWNY KOMPONENT ---
 
@@ -107,6 +142,19 @@ export default function Home() {
 		custom: '',
 	});
 
+	// Section toggles - ON = modyfikuj, OFF = zachowaj oryginał
+	const [activeSections, setActiveSections] = useState({
+		facade: true,      // Domyślnie włączone
+		roof: false,       // Zachowaj oryginalny dach
+		windows: false,    // Zachowaj oryginalne okna
+		ground: false,     // Zachowaj teren
+		fence: false,      // Zachowaj płot
+		garden: false,     // Zachowaj ogród
+		lighting: false,   // Nie dodawaj światła
+		extras: false,     // Nie dodawaj dodatków
+		atmosphere: false, // Zachowaj pogodę
+	});
+
 	const addToHistory = (image, mods) => {
 		const newItem = {
 			id: Date.now(),
@@ -130,7 +178,7 @@ export default function Home() {
 		error,
 		setError,
 		generateVisualization,
-	} = useHouseGenerator(originalImage, modifications, addToHistory);
+	} = useHouseGenerator(originalImage, modifications, activeSections, addToHistory);
 
 	const fileInputRef = useRef(null);
 	const projectImportRef = useRef(null);
@@ -263,6 +311,18 @@ export default function Home() {
 			atmosphere: [],
 			custom: '',
 		});
+		// Reset toggles - tylko elewacja włączona domyślnie
+		setActiveSections({
+			facade: true,
+			roof: false,
+			windows: false,
+			ground: false,
+			fence: false,
+			garden: false,
+			lighting: false,
+			extras: false,
+			atmosphere: false,
+		});
 		setBudgetScore(1);
 		setIsCompareMode(false);
 		resetZoom();
@@ -281,6 +341,27 @@ export default function Home() {
 		resetAll();
 		setError('');
 		if (fileInputRef.current) fileInputRef.current.value = '';
+	};
+
+	const handlePromoteToOriginal = () => {
+		if (!currentImage || currentImage === originalImage) return;
+
+		// Użyj wygenerowanego obrazu jako nowego oryginału
+		setOriginalImage(currentImage);
+		setCurrentImage(currentImage); // Zachowaj jako current też
+
+		// Reset modyfikacji dla kolejnej iteracji
+		resetAll();
+
+		// Wyłącz tryb porównania
+		setIsCompareMode(false);
+	};
+
+	const toggleSection = (section: keyof typeof activeSections) => {
+		setActiveSections((prev) => ({
+			...prev,
+			[section]: !prev[section],
+		}));
 	};
 
 	const restoreFromHistory = (item) => {
@@ -603,6 +684,18 @@ export default function Home() {
 							</div>
 							{currentImage && !isFullscreen && (
 								<div className='pointer-events-auto flex space-x-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg border border-slate-200 shadow-sm'>
+									{/* Przycisk "Edytuj dalej" - pojawia się gdy jest nowa wizualizacja */}
+									{currentImage !== originalImage && (
+										<button
+											onClick={handlePromoteToOriginal}
+											className='flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs font-bold rounded-md shadow-md hover:shadow-lg hover:from-indigo-700 hover:to-violet-700 transition-all border border-indigo-500'
+											title='Użyj tego wyniku jako bazy do kolejnych edycji'
+										>
+											<Heart size={14} className='fill-current' />
+											<span className='hidden sm:inline'>Edytuj dalej</span>
+											<ArrowRight size={14} />
+										</button>
+									)}
 									<button
 										onClick={() => {
 											setIsCompareMode(!isCompareMode);
@@ -905,19 +998,27 @@ export default function Home() {
 								</div>
 							)}
 							{activeTab !== 'presets' && (
-								<div className='grid grid-cols-2 gap-3 mb-6'>
-									{(fullOptions[activeTab as keyof typeof fullOptions] || []).map((opt: any, idx) => (
-										<OptionCard
-											key={idx}
-											label={opt.label}
-											subLabel={opt.subLabel}
-											imageColor={opt.color}
-											textColor={opt.textColor}
-											isActive={modifications[activeTab]?.includes(opt.val)}
-											onClick={() => toggleSelection(activeTab, opt.val)}
-										/>
-									))}
-								</div>
+								<>
+									{/* Section Toggle */}
+									<SectionToggle
+										isEnabled={activeSections[activeTab as keyof typeof activeSections]}
+										onToggle={() => toggleSection(activeTab as keyof typeof activeSections)}
+										label={categoryLabels[activeTab] || activeTab}
+									/>
+									<div className='grid grid-cols-2 gap-3 mb-6'>
+										{(fullOptions[activeTab as keyof typeof fullOptions] || []).map((opt: any, idx) => (
+											<OptionCard
+												key={idx}
+												label={opt.label}
+												subLabel={opt.subLabel}
+												imageColor={opt.color}
+												textColor={opt.textColor}
+												isActive={modifications[activeTab]?.includes(opt.val)}
+												onClick={() => toggleSelection(activeTab, opt.val)}
+											/>
+										))}
+									</div>
+								</>
 							)}
 							{activeTab !== 'presets' && (
 								<div className='mt-4 pt-4 border-t border-slate-200'>

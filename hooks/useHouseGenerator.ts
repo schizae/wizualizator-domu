@@ -13,9 +13,22 @@ interface Modifications {
 	custom: string;
 }
 
+interface ActiveSections {
+	facade: boolean;
+	roof: boolean;
+	windows: boolean;
+	ground: boolean;
+	fence: boolean;
+	garden: boolean;
+	lighting: boolean;
+	extras: boolean;
+	atmosphere: boolean;
+}
+
 export const useHouseGenerator = (
 	originalImage: string | null,
 	modifications: Modifications,
+	activeSections: ActiveSections,
 	addToHistory: (image: string, mods: Modifications) => void
 ) => {
 	const [isProcessing, setIsProcessing] = useState(false);
@@ -33,31 +46,79 @@ export const useHouseGenerator = (
 			const promptParts = [];
 			const joinSelections = (arr: string[]) =>
 				arr.length > 1 ? `połączenie: ${arr.join(' + ')}` : arr[0];
-			
-			if (modifications.facade.length)
-				promptParts.push(`ELEWACJA: ${joinSelections(modifications.facade)}.`);
-			if (modifications.roof.length)
-				promptParts.push(`DACH: ${joinSelections(modifications.roof)}.`);
-			if (modifications.windows.length)
-				promptParts.push(`STOLARKA: ${joinSelections(modifications.windows)}.`);
-			if (modifications.ground.length)
-				promptParts.push(`TEREN: ${joinSelections(modifications.ground)}.`);
-			if (modifications.fence.length)
-				promptParts.push(`OGRODZENIE: ${joinSelections(modifications.fence)}.`);
-			if (modifications.garden.length)
-				promptParts.push(
-					`ROŚLINNOŚĆ: ${joinSelections(modifications.garden)}.`
-				);
-			if (modifications.lighting.length)
-				promptParts.push(
-					`OŚWIETLENIE: ${joinSelections(modifications.lighting)}.`
-				);
-			if (modifications.extras.length)
-				promptParts.push(`DODATKI: ${joinSelections(modifications.extras)}.`);
-			if (modifications.atmosphere.length)
-				promptParts.push(
-					`ATMOSFERA: ${joinSelections(modifications.atmosphere)}.`
-				);
+
+			// Elewacja
+			if (activeSections.facade) {
+				if (modifications.facade.length)
+					promptParts.push(`ELEWACJA: ${joinSelections(modifications.facade)}.`);
+			} else {
+				promptParts.push(`ELEWACJA: ZACHOWAJ ORYGINAŁ - nie zmieniaj elewacji.`);
+			}
+
+			// Dach
+			if (activeSections.roof) {
+				if (modifications.roof.length)
+					promptParts.push(`DACH: ${joinSelections(modifications.roof)}.`);
+			} else {
+				promptParts.push(`DACH: ZACHOWAJ ORYGINAŁ - nie zmieniaj dachu.`);
+			}
+
+			// Stolarka
+			if (activeSections.windows) {
+				if (modifications.windows.length)
+					promptParts.push(`STOLARKA: ${joinSelections(modifications.windows)}.`);
+			} else {
+				promptParts.push(`STOLARKA: ZACHOWAJ ORYGINAŁ - nie zmieniaj okien i drzwi.`);
+			}
+
+			// Teren
+			if (activeSections.ground) {
+				if (modifications.ground.length)
+					promptParts.push(`TEREN: ${joinSelections(modifications.ground)}.`);
+			} else {
+				promptParts.push(`TEREN: ZACHOWAJ ORYGINAŁ - nie zmieniaj terenu.`);
+			}
+
+			// Ogrodzenie
+			if (activeSections.fence) {
+				if (modifications.fence.length)
+					promptParts.push(`OGRODZENIE: ${joinSelections(modifications.fence)}.`);
+			} else {
+				promptParts.push(`OGRODZENIE: ZACHOWAJ ORYGINAŁ - nie zmieniaj ogrodzenia.`);
+			}
+
+			// Roślinność
+			if (activeSections.garden) {
+				if (modifications.garden.length)
+					promptParts.push(`ROŚLINNOŚĆ: ${joinSelections(modifications.garden)}.`);
+			} else {
+				promptParts.push(`ROŚLINNOŚĆ: ZACHOWAJ ORYGINAŁ - nie zmieniaj roślin.`);
+			}
+
+			// Oświetlenie
+			if (activeSections.lighting) {
+				if (modifications.lighting.length)
+					promptParts.push(`OŚWIETLENIE: ${joinSelections(modifications.lighting)}.`);
+			} else {
+				promptParts.push(`OŚWIETLENIE: ZACHOWAJ ORYGINAŁ - nie dodawaj oświetlenia.`);
+			}
+
+			// Dodatki
+			if (activeSections.extras) {
+				if (modifications.extras.length)
+					promptParts.push(`DODATKI: ${joinSelections(modifications.extras)}.`);
+			} else {
+				promptParts.push(`DODATKI: ZACHOWAJ ORYGINAŁ - nie dodawaj dodatków.`);
+			}
+
+			// Atmosfera
+			if (activeSections.atmosphere) {
+				if (modifications.atmosphere.length)
+					promptParts.push(`ATMOSFERA: ${joinSelections(modifications.atmosphere)}.`);
+			} else {
+				promptParts.push(`ATMOSFERA: ZACHOWAJ ORYGINAŁ - nie zmieniaj pogody i pory dnia.`);
+			}
+
 			if (modifications.custom)
 				promptParts.push(`INSTRUKCJE: ${modifications.custom}.`);
 
