@@ -111,8 +111,29 @@ export const useHouseGenerator = (
 				throw new Error('Błąd obrazu');
 			}
 		} catch (err) {
-			console.error(err);
-			setError('Błąd generowania.');
+			console.error('Generation error:', err);
+
+			// Lepsze komunikaty błędów
+			let errorMessage = 'Błąd generowania wizualizacji.';
+
+			if (err instanceof Error) {
+				if (err.message.includes('Failed to fetch')) {
+					errorMessage = 'Brak połączenia z internetem. Sprawdź połączenie i spróbuj ponownie.';
+				} else if (err.message.includes('timeout') || err.message.includes('limit czasu')) {
+					errorMessage = 'Generowanie trwa zbyt długo. Spróbuj z mniejszym obrazem lub prostszymi modyfikacjami.';
+				} else if (err.message.includes('NetworkError')) {
+					errorMessage = 'Błąd sieci. Sprawdź połączenie internetowe.';
+				} else if (err.message.includes('Za dużo żądań')) {
+					errorMessage = err.message; // Użyj komunikatu z API
+				} else if (err.message.includes('klucz API')) {
+					errorMessage = 'Błąd konfiguracji. Skontaktuj się z administratorem.';
+				} else if (err.message.length < 200) {
+					// Jeśli komunikat jest krótki, użyj go
+					errorMessage = err.message;
+				}
+			}
+
+			setError(errorMessage);
 		} finally {
 			setIsProcessing(false);
 			setProcessingStep('');

@@ -182,6 +182,22 @@ export default function Home() {
 	const handleFileUpload = (event) => {
 		const file = event.target.files[0];
 		if (file) {
+			// Walidacja typu pliku
+			const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+			if (!validTypes.includes(file.type)) {
+				setError('Nieprawidłowy format. Użyj JPG, PNG lub WebP.');
+				event.target.value = '';
+				return;
+			}
+
+			// Walidacja rozmiaru (20MB - limit Gemini API)
+			const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+			if (file.size > MAX_SIZE) {
+				setError('Obraz jest zbyt duży (max 20MB). Spróbuj skompresować zdjęcie.');
+				event.target.value = '';
+				return;
+			}
+
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				const imgData = e.target?.result as string;
