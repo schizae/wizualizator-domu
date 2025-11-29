@@ -41,7 +41,7 @@ export const useHouseGenerator = (
 		setIsProcessing(true);
 		setProcessingStep('Analiza geometrii...');
 		setError('');
-		
+
 		try {
 			const promptParts = [];
 			const joinSelections = (arr: string[]) =>
@@ -134,12 +134,12 @@ export const useHouseGenerator = (
 			const promptText = `Jesteś wizualizatorem. Przekształć zdjęcie domu. WYTYCZNE: ${promptParts.join(
 				'\n'
 			)} ZASADY: 1. Zachowaj geometrię. 2. Fotorealizm.`;
-			
+
 			// Simulate processing steps
 			setTimeout(() => setProcessingStep('Renderowanie...'), 2000);
 
 			const base64Image = (currentImage || originalImage).split(',')[1];
-			
+
 			const response = await fetch('/api/generate', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -149,9 +149,9 @@ export const useHouseGenerator = (
 					model: 'gemini-2.5-flash-image-preview',
 				}),
 			});
-			
+
 			const data = await response.json();
-			
+
 			if (data.error) {
 				const errorMsg =
 					typeof data.error === 'object'
@@ -163,13 +163,38 @@ export const useHouseGenerator = (
 			const generatedBase64 = data.candidates?.[0]?.content?.parts?.find(
 				(p: any) => p.inlineData
 			)?.inlineData?.data;
-			
+
 			if (generatedBase64) {
 				const newImage = `data:image/png;base64,${generatedBase64}`;
 				setCurrentImage(newImage);
 				addToHistory(newImage, modifications);
 			} else {
-				throw new Error('Błąd obrazu');
+				// Diagnostyka - loguj pełną odpowiedź API
+				console.error('API Response (brak obrazu):', JSON.stringify(data, null, 2));
+
+				// Sprawdź przyczyny braku obrazu
+				if (!data.candidates || data.candidates.length === 0) {
+					throw new Error('API nie zwróciło żadnych wyników. Spróbuj uprościć opis lub zmniejszyć obraz.');
+				}
+
+				const finishReason = data.candidates[0]?.finishReason;
+				if (finishReason === 'SAFETY') {
+					throw new Error('🛡️ Filtr bezpieczeństwa zablokował generowanie. Spróbuj zmienić opis lub wybrać inne opcje.');
+				}
+
+				if (finishReason === 'RECITATION') {
+					throw new Error('⚠️ Wykryto potencjalne naruszenie praw autorskich. Zmień parametry wizualizacji.');
+				}
+
+				if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
+					throw new Error('📏 Żądanie zbyt długie. Uprość opis lub wybierz mniej opcji.');
+				}
+
+				if (finishReason === 'OTHER') {
+					throw new Error('❌ API zwróciło błąd. Prawdopodobnie zbyt skomplikowany prompt. Spróbuj włączyć mniej sekcji lub uprościć opis.');
+				}
+
+				throw new Error('Brak danych obrazu w odpowiedzi API. Powód: ' + (finishReason || 'nieznany') + '. Sprawdź konsolę przeglądarki (F12).');
 			}
 		} catch (err) {
 			console.error('Generation error:', err);
