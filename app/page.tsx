@@ -387,18 +387,21 @@ export default function Home() {
 		setZoomLevel(1);
 		setPanPosition({ x: 0, y: 0 });
 	};
+	// AutoCAD-style controls
 	const handleWheel = (e) => {
 		if (!currentImage) return;
-		if (e.ctrlKey || e.metaKey || isFullscreen) {
-			e.preventDefault();
-			const delta = e.deltaY * -0.01;
-			const newZoom = Math.min(Math.max(1, zoomLevel + delta), 4);
-			setZoomLevel(newZoom);
-			if (newZoom === 1) setPanPosition({ x: 0, y: 0 });
-		}
+		// ✅ AutoCAD style: Scroll wheel zawsze zoomuje (bez Ctrl)
+		e.preventDefault();
+		const delta = e.deltaY * -0.01;
+		const newZoom = Math.min(Math.max(1, zoomLevel + delta), 4);
+		setZoomLevel(newZoom);
+		if (newZoom === 1) setPanPosition({ x: 0, y: 0 });
 	};
+
 	const startPan = (e) => {
-		if (zoomLevel > 1) {
+		// ✅ AutoCAD style: Middle mouse button (button 1) lub zawsze gdy zoom > 1
+		if (e.button === 1 || zoomLevel > 1) {
+			e.preventDefault();
 			setIsDragging(true);
 			setDragStart({
 				x: e.clientX - panPosition.x,
@@ -653,17 +656,33 @@ export default function Home() {
 
 	// Initialize canvas size when image loads
 	useEffect(() => {
-		if (currentImage && brushCanvasRef.current && imageContainerRef.current) {
+		if (currentImage && brushCanvasRef.current) {
 			const img = new Image();
 			img.onload = () => {
 				const canvas = brushCanvasRef.current;
 				if (!canvas) return;
-				canvas.width = img.width;
-				canvas.height = img.height;
+
+				// ✅ FIX: Pobierz rzeczywiste wymiary WYŚWIETLANEGO obrazu, nie naturalnych
+				const imgElement = document.querySelector('img[alt="Visual"]') as HTMLImageElement;
+				if (imgElement) {
+					const rect = imgElement.getBoundingClientRect();
+
+					// Ustaw wymiary canvas na dokładnie te same co wyświetlany obraz
+					canvas.width = rect.width;
+					canvas.height = rect.height;
+					canvas.style.width = `${rect.width}px`;
+					canvas.style.height = `${rect.height}px`;
+
+					console.log('Canvas resized:', rect.width, 'x', rect.height);
+				} else {
+					// Fallback - użyj naturalnych wymiarów tylko jeśli nie ma img
+					canvas.width = img.width;
+					canvas.height = img.height;
+				}
 			};
 			img.src = currentImage;
 		}
-	}, [currentImage]);
+	}, [currentImage, zoomLevel]); // Dodaj zoomLevel aby canvas się aktualizował przy zoom
 
 	return (
 		<div
@@ -896,13 +915,14 @@ export default function Home() {
 						</div>
 						<div
 							ref={imageContainerRef}
-							className={`flex-1 relative bg-slate-100 flex items-center justify-center overflow-hidden group select-none ${
+							className={`flex-1 relative flex items-center justify-center overflow-hidden group select-none ${
 								isDragging
 									? 'cursor-grabbing'
 									: zoomLevel > 1
 									? 'cursor-grab'
 									: 'cursor-default'
 							}`}
+							style={{ backgroundColor: '#2d2d2d' }} // Ciemne tło jak AutoCAD
 							onWheel={handleWheel}
 							onMouseDown={startPan}
 							onMouseMove={doPan}
@@ -912,15 +932,15 @@ export default function Home() {
 							{!currentImage ? (
 								<div
 									onClick={triggerFileInput}
-									className='text-center p-8 cursor-pointer hover:bg-slate-200 transition-all rounded-xl border-2 border-dashed border-slate-300 m-8 w-full max-w-lg'
+									className='text-center p-8 cursor-pointer hover:bg-slate-700 transition-all rounded-xl border-2 border-dashed border-slate-600 m-8 w-full max-w-lg bg-slate-800'
 								>
-									<div className='bg-blue-50 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4'>
+									<div className='bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4'>
 										<Upload size={32} />
 									</div>
-									<h3 className='text-lg font-bold text-slate-700'>
+									<h3 className='text-lg font-bold text-slate-200'>
 										Wgraj zdjęcie domu
 									</h3>
-									<p className='text-slate-500 text-sm mb-4'>
+									<p className='text-slate-400 text-sm mb-4'>
 										Zacznij od wgrania zdjęcia.
 									</p>
 									<button
@@ -935,7 +955,7 @@ export default function Home() {
 									</button>
 								</div>
 							) : (
-								<div className='relative w-full h-full flex items-center justify-center bg-checkered'>
+								<div className='relative w-full h-full flex items-center justify-center'>
 									{!isCompareMode && (
 										<div
 											className='relative transition-transform duration-100 ease-out origin-center'

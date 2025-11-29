@@ -132,9 +132,54 @@ export const useHouseGenerator = (
 				return;
 			}
 
-			const promptText = `Jesteś wizualizatorem. Przekształć zdjęcie domu. WYTYCZNE: ${promptParts.join(
-				'\n'
-			)} ZASADY: 1. Zachowaj geometrię. 2. Fotorealizm.`;
+			// ✅ ULEPSONY PROMPT SYSTEMOWY - Pixel-Perfect Quality
+			const promptText = `You are a professional architectural visualization AI specialized in photorealistic exterior home transformations.
+
+CRITICAL REQUIREMENTS:
+1. PRESERVE GEOMETRY: Maintain EXACT building structure, roof angles, window positions, door placements, and architectural proportions
+2. PIXEL-PERFECT PRESERVATION: Areas not explicitly modified MUST remain IDENTICAL to the original image, pixel by pixel. Do not alter any pixels outside the modification areas.
+3. PHOTOREALISM: Generate results indistinguishable from professional architectural photography
+4. LIGHTING CONSISTENCY: Match exact time of day, sun angle, shadow direction, and light intensity from the original
+5. MATERIAL ACCURACY: Apply realistic textures with proper reflections, weathering, surface properties, and depth
+6. PERSPECTIVE LOCK: Maintain the EXACT camera angle, lens distortion, and field of view
+
+TECHNICAL SPECIFICATIONS:
+- Resolution: Maintain or enhance original image quality
+- Color grading: Match the color temperature, saturation, and contrast of the original photo
+- Depth of field: Preserve the focal depth and atmospheric perspective
+- Weather conditions: Keep consistent lighting and weather unless explicitly requested
+- Contextual harmony: All modifications must blend seamlessly with surroundings
+- Edge precision: Sharp, clean transitions between materials with no artifacts
+
+MODIFICATIONS REQUESTED:
+${promptParts.join('\n')}
+
+${maskData ? `
+INPAINTING MODE - CRITICAL:
+- Only modify the areas marked in the purple mask
+- All other areas MUST remain EXACTLY as they appear in the original image
+- Perfect pixel-by-pixel match for non-masked regions
+- Seamless blending at mask boundaries
+` : `
+FULL IMAGE MODE - CRITICAL:
+- Only modify the elements specified in the modifications above
+- All other parts of the image (geometry, background, context, unmodified elements) MUST remain pixel-perfect identical to the original
+- Do not alter ANY pixels that are not part of the requested modifications
+- Preserve exact colors, textures, and details of non-modified areas
+`}
+
+QUALITY CHECKLIST:
+✓ Sharp edges and clean transitions between materials
+✓ Realistic weathering and aging appropriate to each material
+✓ Proper light reflection, refraction, and shadow casting
+✓ No visible artifacts, distortions, or AI hallucinations
+✓ Architectural plausibility - all changes must be structurally sound
+✓ Professional finish matching high-end architectural photography standards
+✓ Consistent perspective and vanishing points
+✓ Natural color grading without oversaturation
+✓ Pixel-perfect preservation of non-modified areas
+
+OUTPUT SPECIFICATION: A single photorealistic image that looks like it was captured by a professional architectural photographer, with modifications applied ONLY to the specified elements while keeping all other areas EXACTLY as in the original photograph, pixel by pixel.`;
 
 			// Simulate processing steps
 			setTimeout(() => setProcessingStep('Renderowanie...'), 2000);
