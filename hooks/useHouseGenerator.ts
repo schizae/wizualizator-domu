@@ -246,6 +246,10 @@ OUTPUT SPECIFICATION: A single photorealistic image that looks like it was captu
 					throw new Error('📏 Żądanie zbyt długie. Uprość opis lub wybierz mniej opcji.');
 				}
 
+				if (finishReason === 'NO_IMAGE') {
+					throw new Error('🎨 Problem z przetwarzaniem obrazu lub maski. Spróbuj:\n• Wyczyść maskę i zamaluj ponownie (przycisk "Wyczyść maskę")\n• Upewnij się, że zamalowany obszar jest wystarczająco duży\n• Spróbuj zmniejszyć rozmiar obrazu lub uprościć opis');
+				}
+
 				if (finishReason === 'OTHER') {
 					throw new Error('❌ API zwróciło błąd. Prawdopodobnie zbyt skomplikowany prompt. Spróbuj włączyć mniej sekcji lub uprościć opis.');
 				}

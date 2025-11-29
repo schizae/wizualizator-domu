@@ -1049,6 +1049,33 @@ export default function Home() {
 							/>
 						</div>
 					</div>
+				{/* Pole Custom Prompt - pod zdjęciem */}
+				{currentImage && (
+					<div className='mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-4'>
+						<div className='flex justify-between items-center mb-2'>
+							<label className='block text-xs font-semibold text-slate-500 uppercase tracking-wider'>
+								Dodatkowe instrukcje
+							</label>
+							<button
+								onClick={enhancePrompt}
+								className='text-xs flex items-center text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-2 py-1 rounded-md transition-colors'
+							>
+								<Wand2 size={12} className='mr-1' /> Ulepsz opis
+							</button>
+						</div>
+						<textarea
+							value={modifications.custom}
+							onChange={(e) =>
+								setModifications({
+									...modifications,
+									custom: e.target.value,
+								})
+							}
+							placeholder="Np. 'Zrób podjazd z jasnego żwiru'..."
+							className='w-full text-sm p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none h-20'
+						/>
+					</div>
+				)}
 					{!isFullscreen && history.length > 0 && (
 						<div className='h-32 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col'>
 							<div className='flex items-center justify-between mb-2'>
@@ -1220,32 +1247,6 @@ export default function Home() {
 										))}
 									</div>
 								</>
-							)}
-							{activeTab !== 'presets' && (
-								<div className='mt-4 pt-4 border-t border-slate-200'>
-									<div className='flex justify-between items-center mb-2'>
-										<label className='block text-xs font-semibold text-slate-500 uppercase tracking-wider'>
-											Dodatkowe instrukcje
-										</label>
-										<button
-											onClick={enhancePrompt}
-											className='text-xs flex items-center text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-2 py-1 rounded-md transition-colors'
-										>
-											<Wand2 size={12} className='mr-1' /> Ulepsz opis
-										</button>
-									</div>
-									<textarea
-										value={modifications.custom}
-										onChange={(e) =>
-											setModifications({
-												...modifications,
-												custom: e.target.value,
-											})
-										}
-										placeholder="Np. 'Zrób podjazd z jasnego żwiru'..."
-										className='w-full text-sm p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none h-20'
-									/>
-								</div>
 							)}
 						</div>
 						<div className='p-4 bg-white border-t border-slate-200 z-10 shadow-lg'>
