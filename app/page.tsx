@@ -48,6 +48,10 @@ import {
 	Heart,
 	ArrowRight,
 	RotateCcw,
+	Brush,
+	Eraser,
+	Minus,
+	Power,
 } from 'lucide-react';
 import {
 	categoryLabels,
@@ -155,6 +159,13 @@ export default function Home() {
 		atmosphere: false, // Zachowaj pogodę
 	});
 
+	// Brush Mode - malowanie pędzlem (inpainting)
+	const [isBrushMode, setIsBrushMode] = useState(false);
+	const [brushSize, setBrushSize] = useState(30);
+	const [isErasing, setIsErasing] = useState(false);
+	const brushCanvasRef = useRef<HTMLCanvasElement>(null);
+	const [maskData, setMaskData] = useState<string | null>(null);
+
 	const addToHistory = (image, mods) => {
 		const newItem = {
 			id: Date.now(),
@@ -178,7 +189,7 @@ export default function Home() {
 		error,
 		setError,
 		generateVisualization,
-	} = useHouseGenerator(originalImage, modifications, activeSections, addToHistory);
+	} = useHouseGenerator(originalImage, modifications, activeSections, maskData, addToHistory);
 
 	const fileInputRef = useRef(null);
 	const projectImportRef = useRef(null);
@@ -571,6 +582,89 @@ export default function Home() {
 			query + ' materiały budowlane cena'
 		)}&tbm=shop`;
 
+	// --- BRUSH MODE FUNCTIONS ---
+	const clearBrushMask = () => {
+		const canvas = brushCanvasRef.current;
+		if (!canvas) return;
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return;
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		setMaskData(null);
+	};
+
+	const [isDrawing, setIsDrawing] = useState(false);
+
+	const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+		if (!isBrushMode) return;
+		setIsDrawing(true);
+		draw(e);
+	};
+
+	const stopDrawing = () => {
+		setIsDrawing(false);
+		// Save mask data
+		const canvas = brushCanvasRef.current;
+		if (canvas) {
+			setMaskData(canvas.toDataURL('image/png'));
+		}
+	};
+
+	const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+		if (!isDrawing && e.type !== 'mousedown') return;
+		if (!isBrushMode) return;
+
+		const canvas = brushCanvasRef.current;
+		if (!canvas) return;
+
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return;
+
+		const rect = canvas.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.lineWidth = brushSize;
+
+		if (isErasing) {
+			// Wymazywanie - ustaw globalCompositeOperation na destination-out
+			ctx.globalCompositeOperation = 'destination-out';
+			ctx.strokeStyle = 'rgba(0,0,0,1)';
+		} else {
+			// Rysowanie - pół-przezroczyste fioletowe
+			ctx.globalCompositeOperation = 'source-over';
+			ctx.strokeStyle = 'rgba(147, 51, 234, 0.4)'; // purple-600 z alpha
+			ctx.fillStyle = 'rgba(147, 51, 234, 0.4)';
+		}
+
+		ctx.lineTo(x, y);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(x, y);
+
+		// Dla pierwszego kliknięcia narysuj kropkę
+		if (e.type === 'mousedown') {
+			ctx.beginPath();
+			ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+			ctx.fill();
+		}
+	};
+
+	// Initialize canvas size when image loads
+	useEffect(() => {
+		if (currentImage && brushCanvasRef.current && imageContainerRef.current) {
+			const img = new Image();
+			img.onload = () => {
+				const canvas = brushCanvasRef.current;
+				if (!canvas) return;
+				canvas.width = img.width;
+				canvas.height = img.height;
+			};
+			img.src = currentImage;
+		}
+	}, [currentImage]);
+
 	return (
 		<div
 			className={`min-h-screen bg-slate-50 font-sans text-slate-800 ${
@@ -682,6 +776,59 @@ export default function Home() {
 									</>
 								)}
 							</div>
+							{/* Brush Mode Controls */}
+							{isBrushMode && currentImage && !isFullscreen && (
+								<div className='pointer-events-auto bg-white/90 backdrop-blur-sm p-3 rounded-lg border border-purple-200 shadow-sm space-y-2 min-w-[180px]'>
+									<div className='text-xs font-bold text-purple-700 uppercase tracking-wider mb-2 flex items-center gap-2'>
+										<Brush size={12} />
+										Pędzel
+									</div>
+									{/* Rozmiar pędzla */}
+									<div className='space-y-1'>
+										<div className='flex justify-between items-center'>
+											<span className='text-[10px] text-slate-600'>Rozmiar</span>
+											<span className='text-[10px] font-bold text-purple-600'>{brushSize}px</span>
+										</div>
+										<input
+											type='range'
+											min='5'
+											max='100'
+											value={brushSize}
+											onChange={(e) => setBrushSize(Number(e.target.value))}
+											className='w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600'
+										/>
+									</div>
+									{/* Rysuj / Wymazuj */}
+									<button
+										onClick={() => setIsErasing(!isErasing)}
+										className={`w-full flex items-center justify-between px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+											isErasing
+												? 'bg-orange-100 text-orange-700 border border-orange-200'
+												: 'bg-purple-100 text-purple-700 border border-purple-200'
+										}`}
+									>
+										{isErasing ? (
+											<>
+												<Eraser size={14} />
+												<span>Wymazuj</span>
+											</>
+										) : (
+											<>
+												<Brush size={14} />
+												<span>Rysuj</span>
+											</>
+										)}
+									</button>
+									{/* Wyczyść maskę */}
+									<button
+										onClick={clearBrushMask}
+										className='w-full flex items-center justify-center gap-2 px-2 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-xs font-medium transition-colors border border-red-200'
+									>
+										<Trash2 size={14} />
+										<span>Wyczyść</span>
+									</button>
+								</div>
+							)}
 							{currentImage && !isFullscreen && (
 								<div className='pointer-events-auto flex space-x-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg border border-slate-200 shadow-sm'>
 									{/* Przycisk "Edytuj dalej" - pojawia się gdy jest nowa wizualizacja */}
@@ -710,6 +857,26 @@ export default function Home() {
 										<SplitSquareHorizontal size={14} />
 										<span className='hidden sm:inline'>
 											{isCompareMode ? 'Widok' : 'Porównaj'}
+										</span>
+									</button>
+									<button
+										onClick={() => {
+											setIsBrushMode(!isBrushMode);
+											if (!isBrushMode) {
+												setIsCompareMode(false);
+												resetZoom();
+											}
+										}}
+										className={`flex items-center space-x-1 text-xs font-medium px-3 py-1.5 rounded-md border transition-colors ${
+											isBrushMode
+												? 'bg-purple-100 text-purple-700 border-purple-200'
+												: 'bg-white text-slate-500 hover:text-purple-600 border-slate-200'
+										}`}
+										title='Maluj obszary do modyfikacji'
+									>
+										<Brush size={14} />
+										<span className='hidden sm:inline'>
+											{isBrushMode ? 'Pędzel ON' : 'Pędzel'}
 										</span>
 									</button>
 									<button
@@ -785,6 +952,20 @@ export default function Home() {
 												draggable={false}
 												onDragStart={(e) => e.preventDefault()}
 											/>
+											{/* Canvas overlay dla Brush Mode */}
+											{isBrushMode && (
+												<canvas
+													ref={brushCanvasRef}
+													className='absolute inset-0 w-full h-full cursor-crosshair'
+													onMouseDown={startDrawing}
+													onMouseMove={draw}
+													onMouseUp={stopDrawing}
+													onMouseLeave={stopDrawing}
+													style={{
+														cursor: isBrushMode ? 'crosshair' : 'default',
+													}}
+												/>
+											)}
 										</div>
 									)}
 									{isCompareMode && originalImage && (

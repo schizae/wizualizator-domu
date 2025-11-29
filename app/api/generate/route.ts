@@ -6,6 +6,7 @@ const generateSchema = z.object({
 	prompt: z.string().min(1, 'Opis jest wymagany'),
 	image: z.string().min(100, 'Obraz jest wymagany'),
 	model: z.string().optional().default('gemini-1.5-flash'),
+	mask: z.string().optional(), // Opcjonalna maska dla Brush Mode (inpainting)
 });
 
 // Typy
@@ -13,6 +14,7 @@ interface GenerateRequest {
 	prompt: string;
 	image: string;
 	model?: string;
+	mask?: string;
 }
 
 interface GeminiResponse {
@@ -74,7 +76,7 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const { prompt, image, model } = validationResult.data;
+		const { prompt, image, model, mask } = validationResult.data;
 
 		// 2. Sprawdź klucz API
 		const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
@@ -89,7 +91,20 @@ export async function POST(request: Request) {
 			);
 		}
 
-		// 3. Wywołaj Gemini API z timeout
+		// 3. Przygotuj parts - dodaj maskę jeśli dostępna
+		const parts: any[] = [
+			{ text: prompt },
+			{ inlineData: { mimeType: 'image/png', data: image } },
+		];
+
+		// Dodaj maskę jeśli jest dostępna (Brush Mode)
+		if (mask) {
+			parts.push({
+				inlineData: { mimeType: 'image/png', data: mask },
+			});
+		}
+
+		// 4. Wywołaj Gemini API z timeout
 		const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
 		const response = await fetchWithTimeout(
@@ -100,10 +115,7 @@ export async function POST(request: Request) {
 				body: JSON.stringify({
 					contents: [
 						{
-							parts: [
-								{ text: prompt },
-								{ inlineData: { mimeType: 'image/png', data: image } },
-							],
+							parts,
 						},
 					],
 					generationConfig: { responseModalities: ['IMAGE'] },
@@ -112,7 +124,7 @@ export async function POST(request: Request) {
 			30000 // 30s timeout
 		);
 
-		// 4. Obsłuż odpowiedź
+		// 5. Obsłuż odpowiedź
 		if (!response.ok) {
 			const errorData: GeminiResponse = await response.json();
 			console.error('Gemini API Error:', errorData);
@@ -138,7 +150,7 @@ export async function POST(request: Request) {
 
 		const data: GeminiResponse = await response.json();
 
-		// 5. Zwróć wynik
+		// 6. Zwróć wynik
 		return NextResponse.json(data);
 	} catch (error) {
 		console.error('API Handler Error:', error);

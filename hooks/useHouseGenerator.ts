@@ -29,6 +29,7 @@ export const useHouseGenerator = (
 	originalImage: string | null,
 	modifications: Modifications,
 	activeSections: ActiveSections,
+	maskData: string | null,
 	addToHistory: (image: string, mods: Modifications) => void
 ) => {
 	const [isProcessing, setIsProcessing] = useState(false);
@@ -140,14 +141,24 @@ export const useHouseGenerator = (
 
 			const base64Image = (currentImage || originalImage).split(',')[1];
 
+			// Przygotuj body requestu
+			const requestBody: any = {
+				prompt: promptText,
+				image: base64Image,
+				model: 'gemini-2.5-flash-image-preview',
+			};
+
+			// Dodaj maskę jeśli jest dostępna (Brush Mode - inpainting)
+			if (maskData) {
+				const base64Mask = maskData.split(',')[1];
+				requestBody.mask = base64Mask;
+				setProcessingStep('Renderowanie wybranych obszarów (Brush Mode)...');
+			}
+
 			const response = await fetch('/api/generate', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					prompt: promptText,
-					image: base64Image,
-					model: 'gemini-2.5-flash-image-preview',
-				}),
+				body: JSON.stringify(requestBody),
 			});
 
 			const data = await response.json();
