@@ -20,11 +20,25 @@ export const CategoryButton: React.FC<CategoryButtonProps> = ({
 	isActive,
 	isEnabled = true,
 }) => {
-	// Kolor border-left w zależności od stanu
+	// Kolor border-left i styling w zależności od stanu
 	const getBorderColor = () => {
-		if (isEnabled && count && count > 0) return 'border-l-blue-500'; // ON + ma wybory
-		if (isEnabled) return 'border-l-blue-300'; // ON + brak wyborów
-		return 'border-l-gray-300'; // OFF
+		if (isEnabled && count && count > 0) return 'border-l-blue-600'; // ON + ma wybory - mocniejszy niebieski
+		if (isEnabled) return 'border-l-blue-400'; // ON + brak wyborów
+		return 'border-l-gray-200'; // OFF - bardzo lekki
+	};
+
+	// Background color - mocniejsze dla aktywnych
+	const getBackgroundClass = () => {
+		if (isActive && isEnabled && count && count > 0) {
+			return 'bg-blue-50 text-blue-700'; // Aktywna zakładka + włączona + ma wybory
+		}
+		if (isActive) {
+			return 'bg-white text-blue-600'; // Aktywna zakładka
+		}
+		if (!isEnabled) {
+			return 'bg-gray-50 text-gray-400'; // Wyłączona - wyszarzana
+		}
+		return 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700';
 	};
 
 	return (
@@ -32,15 +46,20 @@ export const CategoryButton: React.FC<CategoryButtonProps> = ({
 			onClick={() => onClick(id)}
 			className={`relative flex items-center space-x-2 px-4 py-3 rounded-t-lg transition-all font-medium whitespace-nowrap border-l-4 ${getBorderColor()} ${
 				isActive
-					? 'bg-white text-blue-600 border-t-2 border-blue-600 shadow-sm z-10'
-					: 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-			}`}
+					? `${getBackgroundClass()} border-t-2 border-blue-600 shadow-sm z-10`
+					: getBackgroundClass()
+			} ${!isEnabled ? 'opacity-60' : ''}`}
 		>
-			<Icon size={18} />
+			<Icon size={18} className={!isEnabled ? 'opacity-50' : ''} />
 			<span className='flex items-center gap-1.5'>
 				{label}
-				{/* Wskaźnik ON/OFF */}
-				{isEnabled && <span className='text-green-500 text-xs'>✓</span>}
+				{/* Wskaźnik ON/OFF - większy i wyraźniejszy dla aktywnych */}
+				{isEnabled && count && count > 0 && (
+					<span className='text-green-600 font-bold text-sm'>✓</span>
+				)}
+				{isEnabled && (!count || count === 0) && (
+					<span className='text-green-500 text-xs'>✓</span>
+				)}
 			</span>
 			{/* Badge z liczbą wyborów */}
 			{(count || 0) > 0 && (

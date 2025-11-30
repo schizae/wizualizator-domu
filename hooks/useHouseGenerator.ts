@@ -48,88 +48,100 @@ export const useHouseGenerator = (
 			const joinSelections = (arr: string[]) =>
 				arr.length > 1 ? `połączenie: ${arr.join(' + ')}` : arr[0];
 
-			// Elewacja
-			if (activeSections.facade) {
-				if (modifications.facade.length)
-					promptParts.push(`ELEWACJA: ${joinSelections(modifications.facade)}.`);
+			// 🎨 BRUSH MODE - używaj tylko custom prompt, ignoruj sekcje
+			if (maskData) {
+				if (!modifications.custom || modifications.custom.trim() === '') {
+					setError('W trybie Brush Mode musisz wpisać instrukcje w polu "Dodatkowe instrukcje"');
+					setIsProcessing(false);
+					return;
+				}
+				// Tylko custom prompt dla Brush Mode
+				promptParts.push(`USER INSTRUCTIONS: ${modifications.custom}.`);
 			} else {
-				promptParts.push(`ELEWACJA: ZACHOWAJ ORYGINAŁ - nie zmieniaj elewacji.`);
-			}
+				// NORMAL MODE - używaj sekcji i toggles
+				// Elewacja
+				if (activeSections.facade) {
+					if (modifications.facade.length)
+						promptParts.push(`ELEWACJA: ${joinSelections(modifications.facade)}.`);
+				} else {
+					promptParts.push(`ELEWACJA: ZACHOWAJ ORYGINAŁ - nie zmieniaj elewacji.`);
+				}
 
-			// Dach
-			if (activeSections.roof) {
-				if (modifications.roof.length)
-					promptParts.push(`DACH: ${joinSelections(modifications.roof)}.`);
-			} else {
-				promptParts.push(`DACH: ZACHOWAJ ORYGINAŁ - nie zmieniaj dachu.`);
-			}
+				// Dach
+				if (activeSections.roof) {
+					if (modifications.roof.length)
+						promptParts.push(`DACH: ${joinSelections(modifications.roof)}.`);
+				} else {
+					promptParts.push(`DACH: ZACHOWAJ ORYGINAŁ - nie zmieniaj dachu.`);
+				}
 
-			// Stolarka
-			if (activeSections.windows) {
-				if (modifications.windows.length)
-					promptParts.push(`STOLARKA: ${joinSelections(modifications.windows)}.`);
-			} else {
-				promptParts.push(`STOLARKA: ZACHOWAJ ORYGINAŁ - nie zmieniaj okien i drzwi.`);
-			}
+				// Stolarka
+				if (activeSections.windows) {
+					if (modifications.windows.length)
+						promptParts.push(`STOLARKA: ${joinSelections(modifications.windows)}.`);
+				} else {
+					promptParts.push(`STOLARKA: ZACHOWAJ ORYGINAŁ - nie zmieniaj okien i drzwi.`);
+				}
 
-			// Teren
-			if (activeSections.ground) {
-				if (modifications.ground.length)
-					promptParts.push(`TEREN: ${joinSelections(modifications.ground)}.`);
-			} else {
-				promptParts.push(`TEREN: ZACHOWAJ ORYGINAŁ - nie zmieniaj terenu.`);
-			}
+				// Teren
+				if (activeSections.ground) {
+					if (modifications.ground.length)
+						promptParts.push(`TEREN: ${joinSelections(modifications.ground)}.`);
+				} else {
+					promptParts.push(`TEREN: ZACHOWAJ ORYGINAŁ - nie zmieniaj terenu.`);
+				}
 
-			// Ogrodzenie
-			if (activeSections.fence) {
-				if (modifications.fence.length)
-					promptParts.push(`OGRODZENIE: ${joinSelections(modifications.fence)}.`);
-			} else {
-				promptParts.push(`OGRODZENIE: ZACHOWAJ ORYGINAŁ - nie zmieniaj ogrodzenia.`);
-			}
+				// Ogrodzenie
+				if (activeSections.fence) {
+					if (modifications.fence.length)
+						promptParts.push(`OGRODZENIE: ${joinSelections(modifications.fence)}.`);
+				} else {
+					promptParts.push(`OGRODZENIE: ZACHOWAJ ORYGINAŁ - nie zmieniaj ogrodzenia.`);
+				}
 
-			// Roślinność
-			if (activeSections.garden) {
-				if (modifications.garden.length)
-					promptParts.push(`ROŚLINNOŚĆ: ${joinSelections(modifications.garden)}.`);
-			} else {
-				promptParts.push(`ROŚLINNOŚĆ: ZACHOWAJ ORYGINAŁ - nie zmieniaj roślin.`);
-			}
+				// Roślinność
+				if (activeSections.garden) {
+					if (modifications.garden.length)
+						promptParts.push(`ROŚLINNOŚĆ: ${joinSelections(modifications.garden)}.`);
+				} else {
+					promptParts.push(`ROŚLINNOŚĆ: ZACHOWAJ ORYGINAŁ - nie zmieniaj roślin.`);
+				}
 
-			// Oświetlenie
-			if (activeSections.lighting) {
-				if (modifications.lighting.length)
-					promptParts.push(`OŚWIETLENIE: ${joinSelections(modifications.lighting)}.`);
-			} else {
-				promptParts.push(`OŚWIETLENIE: ZACHOWAJ ORYGINAŁ - nie dodawaj oświetlenia.`);
-			}
+				// Oświetlenie
+				if (activeSections.lighting) {
+					if (modifications.lighting.length)
+						promptParts.push(`OŚWIETLENIE: ${joinSelections(modifications.lighting)}.`);
+				} else {
+					promptParts.push(`OŚWIETLENIE: ZACHOWAJ ORYGINAŁ - nie dodawaj oświetlenia.`);
+				}
 
-			// Dodatki
-			if (activeSections.extras) {
-				if (modifications.extras.length)
-					promptParts.push(`DODATKI: ${joinSelections(modifications.extras)}.`);
-			} else {
-				promptParts.push(`DODATKI: ZACHOWAJ ORYGINAŁ - nie dodawaj dodatków.`);
-			}
+				// Dodatki
+				if (activeSections.extras) {
+					if (modifications.extras.length)
+						promptParts.push(`DODATKI: ${joinSelections(modifications.extras)}.`);
+				} else {
+					promptParts.push(`DODATKI: ZACHOWAJ ORYGINAŁ - nie dodawaj dodatków.`);
+				}
 
-			// Atmosfera
-			if (activeSections.atmosphere) {
-				if (modifications.atmosphere.length)
-					promptParts.push(`ATMOSFERA: ${joinSelections(modifications.atmosphere)}.`);
-			} else {
-				promptParts.push(`ATMOSFERA: ZACHOWAJ ORYGINAŁ - nie zmieniaj pogody i pory dnia.`);
-			}
+				// Atmosfera
+				if (activeSections.atmosphere) {
+					if (modifications.atmosphere.length)
+						promptParts.push(`ATMOSFERA: ${joinSelections(modifications.atmosphere)}.`);
+				} else {
+					promptParts.push(`ATMOSFERA: ZACHOWAJ ORYGINAŁ - nie zmieniaj pogody i pory dnia.`);
+				}
 
-			if (modifications.custom)
-				promptParts.push(`INSTRUKCJE: ${modifications.custom}.`);
+				if (modifications.custom)
+					promptParts.push(`INSTRUKCJE: ${modifications.custom}.`);
 
-			const hasSelections = Object.entries(modifications).some(([key, val]) =>
-				Array.isArray(val) ? val.length > 0 : !!val
-			);
-			if (!hasSelections) {
-				setError('Wybierz styl.');
-				setIsProcessing(false);
-				return;
+				const hasSelections = Object.entries(modifications).some(([key, val]) =>
+					Array.isArray(val) ? val.length > 0 : !!val
+				);
+				if (!hasSelections) {
+					setError('Wybierz styl.');
+					setIsProcessing(false);
+					return;
+				}
 			}
 
 			// ✅ ULEPSONY PROMPT SYSTEMOWY - Pixel-Perfect Quality

@@ -1207,6 +1207,7 @@ export default function Home() {
 									label='Inspiracje'
 									onClick={setActiveTab}
 									isActive={activeTab === 'presets'}
+							isEnabled={false}
 								/>
 								<CategoryButton
 									id='atmosphere'
@@ -1214,6 +1215,7 @@ export default function Home() {
 									label='Pogoda'
 									onClick={setActiveTab}
 									isActive={activeTab === 'atmosphere'}
+							isEnabled={activeSections.atmosphere}
 								/>
 								<CategoryButton
 									id='facade'
