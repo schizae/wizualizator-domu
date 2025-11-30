@@ -632,52 +632,86 @@ export default function Home() {
 
 	const stopDrawing = () => {
 		setIsDrawing(false);
-		// Save mask data - convert to black & white mask for API
+		// Save mask data - convert to black & white mask AND SCALE to original image size
 		const canvas = brushCanvasRef.current;
 		if (canvas) {
-			// Create a new canvas for black & white mask
-			const maskCanvas = document.createElement('canvas');
-			maskCanvas.width = canvas.width;
-			maskCanvas.height = canvas.height;
-			const maskCtx = maskCanvas.getContext('2d');
+			// Get original image dimensions
+			const img = new Image();
+			img.onload = () => {
+				// Original image natural dimensions
+				const originalWidth = img.naturalWidth;
+				const originalHeight = img.naturalHeight;
+				const canvasWidth = canvas.width;
+				const canvasHeight = canvas.height;
 
-			if (maskCtx) {
-				// Fill with black background (areas to preserve)
-				maskCtx.fillStyle = 'black';
-				maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+				console.log('🎨 Mask scaling:', {
+					canvas: `${canvasWidth}x${canvasHeight}`,
+					original: `${originalWidth}x${originalHeight}`,
+					scale: `${(originalWidth / canvasWidth).toFixed(2)}x`
+				});
 
-				// Get the purple drawing from visible canvas
-				const imageData = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height);
+				// Create mask canvas at ORIGINAL IMAGE SIZE
+				const maskCanvas = document.createElement('canvas');
+				maskCanvas.width = originalWidth;
+				maskCanvas.height = originalHeight;
+				const maskCtx = maskCanvas.getContext('2d');
 
-				if (imageData) {
-					const data = imageData.data;
-					const maskImageData = maskCtx.createImageData(canvas.width, canvas.height);
-					const maskData = maskImageData.data;
+				if (maskCtx) {
+					// Fill with black background (areas to preserve)
+					maskCtx.fillStyle = 'black';
+					maskCtx.fillRect(0, 0, originalWidth, originalHeight);
 
-					// Convert: any purple pixel -> white in mask
-					for (let i = 0; i < data.length; i += 4) {
-						const alpha = data[i + 3]; // alpha channel
-						if (alpha > 0) {
-							// This pixel was drawn on -> white in mask (edit this area)
-							maskData[i] = 255;     // R
-							maskData[i + 1] = 255; // G
-							maskData[i + 2] = 255; // B
-							maskData[i + 3] = 255; // A
-						} else {
-							// Transparent pixel -> black in mask (preserve this area)
-							maskData[i] = 0;       // R
-							maskData[i + 1] = 0;   // G
-							maskData[i + 2] = 0;   // B
-							maskData[i + 3] = 255; // A
+					// Get the purple drawing from visible canvas
+					const imageData = canvas.getContext('2d')?.getImageData(0, 0, canvasWidth, canvasHeight);
+
+					if (imageData) {
+						const data = imageData.data;
+
+						// Create temporary canvas for the purple drawing
+						const tempCanvas = document.createElement('canvas');
+						tempCanvas.width = canvasWidth;
+						tempCanvas.height = canvasHeight;
+						const tempCtx = tempCanvas.getContext('2d');
+
+						if (tempCtx) {
+							tempCtx.putImageData(imageData, 0, 0);
+
+							// Scale and draw purple mask to full original size
+							// Use white color for masked areas
+							maskCtx.globalCompositeOperation = 'source-over';
+
+							// Draw scaled version pixel by pixel for accuracy
+							const scaleX = originalWidth / canvasWidth;
+							const scaleY = originalHeight / canvasHeight;
+
+							for (let y = 0; y < canvasHeight; y++) {
+								for (let x = 0; x < canvasWidth; x++) {
+									const i = (y * canvasWidth + x) * 4;
+									const alpha = data[i + 3];
+
+									if (alpha > 0) {
+										// This pixel was drawn on -> paint white in scaled mask
+										const scaledX = Math.floor(x * scaleX);
+										const scaledY = Math.floor(y * scaleY);
+										const scaledW = Math.ceil(scaleX);
+										const scaledH = Math.ceil(scaleY);
+
+										maskCtx.fillStyle = 'white';
+										maskCtx.fillRect(scaledX, scaledY, scaledW, scaledH);
+									}
+								}
+							}
 						}
 					}
 
-					maskCtx.putImageData(maskImageData, 0, 0);
+					// Save the scaled black & white mask
+					const scaledMaskData = maskCanvas.toDataURL('image/png');
+					setMaskData(scaledMaskData);
+					console.log('✅ Mask saved at original image size:', `${originalWidth}x${originalHeight}`);
 				}
+			};
 
-				// Save the black & white mask
-				setMaskData(maskCanvas.toDataURL('image/png'));
-			}
+			img.src = currentImage || originalImage || '';
 		}
 	};
 
