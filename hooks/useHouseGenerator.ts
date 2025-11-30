@@ -155,11 +155,35 @@ MODIFICATIONS REQUESTED:
 ${promptParts.join('\n')}
 
 ${maskData ? `
-INPAINTING MODE - CRITICAL:
-- Only modify the areas marked in the purple mask
-- All other areas MUST remain EXACTLY as they appear in the original image
-- Perfect pixel-by-pixel match for non-masked regions
-- Seamless blending at mask boundaries
+INPAINTING MODE - CRITICAL INSTRUCTIONS:
+
+MASK INTERPRETATION:
+- A black and white mask image is provided (third image)
+- WHITE pixels in the mask = areas to EDIT/MODIFY
+- BLACK pixels in the mask = areas to PRESERVE exactly as in original
+
+WHAT TO DO:
+- Apply the modifications listed above ONLY to the white-masked areas
+- In white-masked areas, implement the requested changes with photorealistic quality
+- If modifications mention specific elements (doors, windows, materials, etc.), add/modify them ONLY in the white-masked regions
+- Match the architectural style, lighting, and perspective of the surrounding original image
+
+WHAT TO PRESERVE:
+- ALL black-masked areas MUST remain pixel-perfect identical to the original image
+- Do not alter any pixels in black-masked regions
+- Maintain exact colors, textures, shadows, and details in preserved areas
+
+BLENDING REQUIREMENTS:
+- Create seamless transitions at mask boundaries (where white meets black)
+- Match lighting, shadows, and perspective at edges
+- Ensure new elements blend naturally with preserved context
+- No visible seams, artifacts, or discontinuities at boundaries
+
+EXAMPLE: If mask has white area on a wall and modifications say "add wooden door":
+→ Generate a photorealistic wooden door in the white-masked area
+→ Match lighting and perspective of the original wall
+→ Blend seamlessly at mask edges
+→ Keep everything outside white area exactly as original
 ` : `
 FULL IMAGE MODE - CRITICAL:
 - Only modify the elements specified in the modifications above

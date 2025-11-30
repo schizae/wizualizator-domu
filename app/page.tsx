@@ -52,6 +52,7 @@ import {
 	Eraser,
 	Minus,
 	Power,
+	Eye,
 } from 'lucide-react';
 import {
 	categoryLabels,
@@ -595,6 +596,27 @@ export default function Home() {
 		setMaskData(null);
 	};
 
+	const previewMask = () => {
+		if (maskData) {
+			const win = window.open();
+			if (win) {
+				win.document.write(`
+					<html>
+						<head><title>Podgląd maski (białe = obszar do edycji)</title></head>
+						<body style="margin:0; background:#1a1a1a; display:flex; align-items:center; justify-content:center; min-height:100vh;">
+							<div style="text-align:center;">
+								<h2 style="color:#fff; font-family:sans-serif; margin-bottom:10px;">
+									Maska do API (Białe piksele = obszar do edycji)
+								</h2>
+								<img src="${maskData}" style="max-width:90vw; max-height:80vh; border:2px solid #fff;" />
+							</div>
+						</body>
+					</html>
+				`);
+			}
+		}
+	};
+
 	const [isDrawing, setIsDrawing] = useState(false);
 
 	const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -605,10 +627,52 @@ export default function Home() {
 
 	const stopDrawing = () => {
 		setIsDrawing(false);
-		// Save mask data
+		// Save mask data - convert to black & white mask for API
 		const canvas = brushCanvasRef.current;
 		if (canvas) {
-			setMaskData(canvas.toDataURL('image/png'));
+			// Create a new canvas for black & white mask
+			const maskCanvas = document.createElement('canvas');
+			maskCanvas.width = canvas.width;
+			maskCanvas.height = canvas.height;
+			const maskCtx = maskCanvas.getContext('2d');
+
+			if (maskCtx) {
+				// Fill with black background (areas to preserve)
+				maskCtx.fillStyle = 'black';
+				maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+				// Get the purple drawing from visible canvas
+				const imageData = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height);
+
+				if (imageData) {
+					const data = imageData.data;
+					const maskImageData = maskCtx.createImageData(canvas.width, canvas.height);
+					const maskData = maskImageData.data;
+
+					// Convert: any purple pixel -> white in mask
+					for (let i = 0; i < data.length; i += 4) {
+						const alpha = data[i + 3]; // alpha channel
+						if (alpha > 0) {
+							// This pixel was drawn on -> white in mask (edit this area)
+							maskData[i] = 255;     // R
+							maskData[i + 1] = 255; // G
+							maskData[i + 2] = 255; // B
+							maskData[i + 3] = 255; // A
+						} else {
+							// Transparent pixel -> black in mask (preserve this area)
+							maskData[i] = 0;       // R
+							maskData[i + 1] = 0;   // G
+							maskData[i + 2] = 0;   // B
+							maskData[i + 3] = 255; // A
+						}
+					}
+
+					maskCtx.putImageData(maskImageData, 0, 0);
+				}
+
+				// Save the black & white mask
+				setMaskData(maskCanvas.toDataURL('image/png'));
+			}
 		}
 	};
 
@@ -846,6 +910,17 @@ export default function Home() {
 										<Trash2 size={14} />
 										<span>Wyczyść</span>
 									</button>
+								{/* Podgląd maski - tylko gdy maska istnieje */}
+								{maskData && (
+									<button
+										onClick={previewMask}
+										className='w-full flex items-center justify-center gap-2 px-2 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-xs font-medium transition-colors border border-blue-200'
+										title='Zobacz czarno-białą maskę wysyłaną do API'
+									>
+										<Eye size={14} />
+										<span>Podgląd</span>
+									</button>
+								)}
 								</div>
 							)}
 							{currentImage && !isFullscreen && (
