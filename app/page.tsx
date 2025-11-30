@@ -532,6 +532,11 @@ export default function Home() {
 		);
 	};
 	const toggleSelection = (cat, val) => {
+		// Auto-enable sekcji gdy użytkownik wybiera opcję
+		if (!activeSections[cat]) {
+			setActiveSections((prev) => ({ ...prev, [cat]: true }));
+		}
+
 		setModifications((prev) => {
 			const curr = prev[cat];
 			const isSel = curr.includes(val);
@@ -1216,6 +1221,7 @@ export default function Home() {
 									label='Elewacja'
 									onClick={setActiveTab}
 									isActive={activeTab === 'facade'}
+							isEnabled={activeSections.facade}
 									count={modifications.facade.length}
 								/>
 								<CategoryButton
@@ -1224,6 +1230,7 @@ export default function Home() {
 									label='Dach'
 									onClick={setActiveTab}
 									isActive={activeTab === 'roof'}
+							isEnabled={activeSections.roof}
 									count={modifications.roof.length}
 								/>
 								<CategoryButton
@@ -1232,6 +1239,7 @@ export default function Home() {
 									label='Stolarka'
 									onClick={setActiveTab}
 									isActive={activeTab === 'windows'}
+							isEnabled={activeSections.windows}
 									count={modifications.windows.length}
 								/>
 								<CategoryButton
@@ -1240,6 +1248,7 @@ export default function Home() {
 									label='Teren'
 									onClick={setActiveTab}
 									isActive={activeTab === 'ground'}
+							isEnabled={activeSections.ground}
 									count={modifications.ground.length}
 								/>
 								<CategoryButton
@@ -1248,6 +1257,7 @@ export default function Home() {
 									label='Płot'
 									onClick={setActiveTab}
 									isActive={activeTab === 'fence'}
+							isEnabled={activeSections.fence}
 									count={modifications.fence.length}
 								/>
 								<CategoryButton
@@ -1256,6 +1266,7 @@ export default function Home() {
 									label='Ogród'
 									onClick={setActiveTab}
 									isActive={activeTab === 'garden'}
+							isEnabled={activeSections.garden}
 									count={modifications.garden.length}
 								/>
 								<CategoryButton
@@ -1264,6 +1275,7 @@ export default function Home() {
 									label='Światło'
 									onClick={setActiveTab}
 									isActive={activeTab === 'lighting'}
+							isEnabled={activeSections.lighting}
 									count={modifications.lighting.length}
 								/>
 								<CategoryButton
@@ -1272,6 +1284,7 @@ export default function Home() {
 									label='Dodatki'
 									onClick={setActiveTab}
 									isActive={activeTab === 'extras'}
+							isEnabled={activeSections.extras}
 									count={modifications.extras.length}
 								/>
 							</div>
@@ -1606,6 +1619,47 @@ export default function Home() {
 									<div className='hidden print:block p-4 border border-slate-200 rounded-xl text-sm h-40 bg-white whitespace-pre-wrap'>
 										{reportNotes || 'Brak uwag.'}
 									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+			{/* Status Bar - na dole ekranu */}
+			{!isFullscreen && currentImage && (
+				<div className='fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-40'>
+					<div className='max-w-7xl mx-auto px-4 py-2'>
+						<div className='flex items-center justify-between text-xs text-slate-600'>
+							{/* Lewa strona - Brush Mode status */}
+							<div className='flex items-center gap-4'>
+								<div className='flex items-center gap-2'>
+									<span className='font-semibold text-slate-700'>🖌️ Brush Mode:</span>
+									<span className={`px-2 py-0.5 rounded-full font-medium ${isBrushMode ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+										{isBrushMode ? 'ON' : 'OFF'}
+									</span>
+								</div>
+								{/* Liczba wybranych opcji */}
+								<div className='flex items-center gap-2'>
+									<span className='font-semibold text-slate-700'>📋 Wybrane:</span>
+									<span className='px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium'>
+										{Object.values(modifications).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0)} opcji
+									</span>
+								</div>
+							</div>
+
+							{/* Prawa strona - Aktywne sekcje */}
+							<div className='flex items-center gap-2'>
+								<span className='font-semibold text-slate-700'>🎨 Sekcje:</span>
+								<div className='flex items-center gap-1.5'>
+									{activeSections.facade && <span className='px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[10px]'>Elewacja✓</span>}
+									{activeSections.roof && <span className='px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[10px]'>Dach✓</span>}
+									{activeSections.windows && <span className='px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[10px]'>Stolarka✓</span>}
+									{activeSections.ground && <span className='px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[10px]'>Teren✓</span>}
+									{activeSections.fence && <span className='px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[10px]'>Płot✓</span>}
+									{activeSections.garden && <span className='px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[10px]'>Ogród✓</span>}
+									{activeSections.lighting && <span className='px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[10px]'>Światło✓</span>}
+									{activeSections.extras && <span className='px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[10px]'>Dodatki✓</span>}
+									{!Object.values(activeSections).some(v => v) && <span className='text-gray-400 italic'>Brak aktywnych</span>}
 								</div>
 							</div>
 						</div>
