@@ -632,86 +632,46 @@ export default function Home() {
 
 	const stopDrawing = () => {
 		setIsDrawing(false);
-		// Save mask data - convert to black & white mask AND SCALE to original image size
+		// ✅ FIX MASK SHIFT: Canvas is already at natural size, just convert to B&W
 		const canvas = brushCanvasRef.current;
 		if (canvas) {
-			// Get original image dimensions
-			const img = new Image();
-			img.onload = () => {
-				// Original image natural dimensions
-				const originalWidth = img.naturalWidth;
-				const originalHeight = img.naturalHeight;
-				const canvasWidth = canvas.width;
-				const canvasHeight = canvas.height;
+			const ctx = canvas.getContext('2d');
+			if (!ctx) return;
 
-				console.log('🎨 Mask scaling:', {
-					canvas: `${canvasWidth}x${canvasHeight}`,
-					original: `${originalWidth}x${originalHeight}`,
-					scale: `${(originalWidth / canvasWidth).toFixed(2)}x`
-				});
+			// Create mask canvas at same size (already natural image size)
+			const maskCanvas = document.createElement('canvas');
+			maskCanvas.width = canvas.width;
+			maskCanvas.height = canvas.height;
+			const maskCtx = maskCanvas.getContext('2d');
 
-				// Create mask canvas at ORIGINAL IMAGE SIZE
-				const maskCanvas = document.createElement('canvas');
-				maskCanvas.width = originalWidth;
-				maskCanvas.height = originalHeight;
-				const maskCtx = maskCanvas.getContext('2d');
+			if (maskCtx) {
+				// Fill with black background (areas to preserve)
+				maskCtx.fillStyle = 'black';
+				maskCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-				if (maskCtx) {
-					// Fill with black background (areas to preserve)
-					maskCtx.fillStyle = 'black';
-					maskCtx.fillRect(0, 0, originalWidth, originalHeight);
+				// Get the purple drawing from canvas
+				const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				const data = imageData.data;
 
-					// Get the purple drawing from visible canvas
-					const imageData = canvas.getContext('2d')?.getImageData(0, 0, canvasWidth, canvasHeight);
+				// Convert purple pixels to white (areas to edit)
+				maskCtx.fillStyle = 'white';
+				for (let y = 0; y < canvas.height; y++) {
+					for (let x = 0; x < canvas.width; x++) {
+						const i = (y * canvas.width + x) * 4;
+						const alpha = data[i + 3];
 
-					if (imageData) {
-						const data = imageData.data;
-
-						// Create temporary canvas for the purple drawing
-						const tempCanvas = document.createElement('canvas');
-						tempCanvas.width = canvasWidth;
-						tempCanvas.height = canvasHeight;
-						const tempCtx = tempCanvas.getContext('2d');
-
-						if (tempCtx) {
-							tempCtx.putImageData(imageData, 0, 0);
-
-							// Scale and draw purple mask to full original size
-							// Use white color for masked areas
-							maskCtx.globalCompositeOperation = 'source-over';
-
-							// Draw scaled version pixel by pixel for accuracy
-							const scaleX = originalWidth / canvasWidth;
-							const scaleY = originalHeight / canvasHeight;
-
-							for (let y = 0; y < canvasHeight; y++) {
-								for (let x = 0; x < canvasWidth; x++) {
-									const i = (y * canvasWidth + x) * 4;
-									const alpha = data[i + 3];
-
-									if (alpha > 0) {
-										// This pixel was drawn on -> paint white in scaled mask
-										const scaledX = Math.floor(x * scaleX);
-										const scaledY = Math.floor(y * scaleY);
-										const scaledW = Math.ceil(scaleX);
-										const scaledH = Math.ceil(scaleY);
-
-										maskCtx.fillStyle = 'white';
-										maskCtx.fillRect(scaledX, scaledY, scaledW, scaledH);
-									}
-								}
-							}
+						if (alpha > 0) {
+							// This pixel was drawn on -> paint white
+							maskCtx.fillRect(x, y, 1, 1);
 						}
 					}
-
-					// Save the scaled black & white mask
-					const scaledMaskData = maskCanvas.toDataURL('image/png');
-					setMaskData(scaledMaskData);
-					console.log('✅ Mask saved at original image size:', `${originalWidth}x${originalHeight}`);
 				}
-			};
 
-			img.src = currentImage || originalImage || '';
+				// Save the black & white mask
+				const maskDataUrl = maskCanvas.toDataURL('image/png');
+				setMaskData(maskDataUrl);
+				console.log('✅ Mask saved (1:1 with original):', `${canvas.width}x${canvas.height}`);
+			}
 		}
 	};
 
@@ -725,13 +685,22 @@ export default function Home() {
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
 
+		// ✅ FIX MASK SHIFT: Przelicz współrzędne z przestrzeni wyświetlania na canvas
 		const rect = canvas.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
+		const displayX = e.clientX - rect.left;
+		const displayY = e.clientY - rect.top;
+
+		// Skala: wewnętrzny rozmiar canvas / wyświetlany rozmiar
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+
+		// Przeliczone współrzędne w przestrzeni canvas
+		const x = displayX * scaleX;
+		const y = displayY * scaleY;
 
 		ctx.lineCap = 'round';
 		ctx.lineJoin = 'round';
-		ctx.lineWidth = brushSize;
+		ctx.lineWidth = brushSize * scaleX; // Skaluj również rozmiar pędzla
 
 		if (isErasing) {
 			// Wymazywanie - ustaw globalCompositeOperation na destination-out
@@ -752,7 +721,7 @@ export default function Home() {
 		// Dla pierwszego kliknięcia narysuj kropkę
 		if (e.type === 'mousedown') {
 			ctx.beginPath();
-			ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+			ctx.arc(x, y, (brushSize * scaleX) / 2, 0, Math.PI * 2);
 			ctx.fill();
 		}
 	};
@@ -765,22 +734,27 @@ export default function Home() {
 				const canvas = brushCanvasRef.current;
 				if (!canvas) return;
 
-				// ✅ FIX: Pobierz rzeczywiste wymiary WYŚWIETLANEGO obrazu, nie naturalnych
+				// ✅ FIX MASK SHIFT: Ustaw canvas na NATURALNY rozmiar obrazu
+				// Wewnętrzny rozmiar = naturalny rozmiar obrazu (np. 4000x3000)
+				canvas.width = img.naturalWidth;
+				canvas.height = img.naturalHeight;
+
+				// Wyświetlanie przez CSS = dopasuj do wyświetlanego obrazu
 				const imgElement = document.querySelector('img[alt="Visual"]') as HTMLImageElement;
 				if (imgElement) {
 					const rect = imgElement.getBoundingClientRect();
-
-					// Ustaw wymiary canvas na dokładnie te same co wyświetlany obraz
-					canvas.width = rect.width;
-					canvas.height = rect.height;
 					canvas.style.width = `${rect.width}px`;
 					canvas.style.height = `${rect.height}px`;
 
-					console.log('Canvas resized:', rect.width, 'x', rect.height);
+					console.log('🎨 Canvas initialized:', {
+						internal: `${canvas.width}x${canvas.height}`,
+						display: `${rect.width}x${rect.height}`,
+						scale: `${(canvas.width / rect.width).toFixed(2)}x`
+					});
 				} else {
-					// Fallback - użyj naturalnych wymiarów tylko jeśli nie ma img
-					canvas.width = img.width;
-					canvas.height = img.height;
+					// Fallback - dopasuj style do naturalnych wymiarów
+					canvas.style.width = `${img.naturalWidth}px`;
+					canvas.style.height = `${img.naturalHeight}px`;
 				}
 			};
 			img.src = currentImage;
@@ -994,10 +968,23 @@ export default function Home() {
 									</button>
 									<button
 										onClick={() => {
-											setIsBrushMode(!isBrushMode);
-											if (!isBrushMode) {
+											const newBrushMode = !isBrushMode;
+											setIsBrushMode(newBrushMode);
+											if (newBrushMode) {
+												// Entering Brush Mode
 												setIsCompareMode(false);
 												resetZoom();
+											} else {
+												// Exiting Brush Mode - CLEAR MASK DATA
+												setMaskData(null);
+												// Clear canvas drawing
+												const canvas = brushCanvasRef.current;
+												if (canvas) {
+													const ctx = canvas.getContext('2d');
+													if (ctx) {
+														ctx.clearRect(0, 0, canvas.width, canvas.height);
+													}
+												}
 											}
 										}}
 										className={`flex items-center space-x-1 text-xs font-medium px-3 py-1.5 rounded-md border transition-colors ${
